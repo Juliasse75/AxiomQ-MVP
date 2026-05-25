@@ -1,0 +1,171 @@
+ID_Veiculo,Tipo,Capacidade_KG,Status
+Axiom-001,Picape 4x4,1500,Ativo
+Axiom-002,Van,1500,Ativo
+Axiom-003,Van,3500,Ativo
+Axiom-004,Picape 4x4,3500,Ativo
+Axiom-005,Picape 4x4,1500,Ativo
+Axiom-006,Picape 4x4,1500,Ativo
+Axiom-007,Picape 4x4,3500,Ativo
+Axiom-008,Van,12000,Ativo
+Axiom-009,Picape 4x4,3500,Ativo
+Axiom-010,Picape 4x4,3500,Ativo
+Axiom-011,Picape 4x4,1500,Ativo
+Axiom-012,Caminhão Pesado,3500,Ativo
+Axiom-013,Van,1500,Ativo
+Axiom-014,Van,1500,Ativo
+Axiom-015,Picape 4x4,1500,Ativo
+Axiom-016,Caminhão Pesado,12000,Ativo
+Axiom-017,Van,3500,Ativo
+Axiom-018,Van,1500,Ativo
+Axiom-019,Van,3500,Ativo
+Axiom-020,Picape 4x4,12000,Ativo
+Axiom-021,Van,1500,Ativo
+Axiom-022,Caminhão Pesado,3500,Ativo
+Axiom-023,Caminhão Pesado,1500,Ativo
+Axiom-024,Picape 4x4,1500,Ativo
+Axiom-025,Caminhão Pesado,1500,Ativo
+Axiom-026,Van,12000,Ativo
+Axiom-027,Van,12000,Ativo
+Axiom-028,Picape 4x4,12000,Ativo
+Axiom-029,Van,1500,Ativo
+Axiom-030,Picape 4x4,3500,Ativo
+Axiom-031,Picape 4x4,3500,Ativo
+Axiom-032,Caminhão Pesado,12000,Ativo
+Axiom-033,Van,1500,Ativo
+Axiom-034,Picape 4x4,1500,Ativo
+Axiom-035,Picape 4x4,12000,Ativo
+Axiom-036,Caminhão Pesado,3500,Ativo
+Axiom-037,Picape 4x4,3500,Ativo
+Axiom-038,Picape 4x4,3500,Ativo
+Axiom-039,Van,12000,Ativo
+Axiom-040,Van,1500,Ativo
+Axiom-041,Picape 4x4,3500,Ativo
+Axiom-042,Caminhão Pesado,12000,Ativo
+Axiom-043,Van,1500,Ativo
+Axiom-044,Picape 4x4,3500,Ativo
+Axiom-045,Picape 4x4,1500,Ativo
+Axiom-046,Van,1500,Ativo
+Axiom-047,Picape 4x4,12000,Ativo
+Axiom-048,Van,3500,Ativo
+Axiom-049,Caminhão Pesado,1500,Ativo
+Axiom-050,Van,12000,Ativo
+Axiom-051,Picape 4x4,1500,Ativo
+Axiom-052,Caminhão Pesado,1500,Ativo
+Axiom-053,Van,3500,Ativo
+Axiom-054,Van,12000,Ativo
+Axiom-055,Picape 4x4,3500,Ativo
+Axiom-056,Picape 4x4,1500,Ativo
+Axiom-057,Caminhão Pesado,1500,Ativo
+Axiom-058,Picape 4x4,1500,Ativo
+Axiom-059,Caminhão Pesado,1500,Ativo
+Axiom-060,Caminhão Pesado,1500,Ativo
+Axiom-061,Caminhão Pesado,12000,Ativo
+Axiom-062,Van,12000,Ativo
+Axiom-063,Van,3500,Ativo
+Axiom-064,Caminhão Pesado,1500,Ativo
+Axiom-065,Van,1500,Ativo
+Axiom-066,Picape 4x4,1500,Ativo
+Axiom-067,Van,3500,Ativo
+Axiom-068,Van,12000,Ativo
+Axiom-069,Picape 4x4,3500,Ativo
+Axiom-070,Van,12000,Ativo
+Axiom-071,Caminhão Pesado,12000,Ativo
+Axiom-072,Picape 4x4,1500,Ativo
+Axiom-073,Picape 4x4,12000,Ativo
+Axiom-074,Van,3500,Ativo
+Axiom-075,Van,1500,Ativo
+Axiom-076,Caminhão Pesado,12000,Ativo
+Axiom-077,Van,12000,Ativo
+Axiom-078,Van,12000,Ativo
+Axiom-079,Picape 4x4,3500,Ativo
+Axiom-080,Van,1500,Ativo
+Axiom-081,Caminhão Pesado,1500,Ativo
+Axiom-082,Van,1500,Ativo
+Axiom-083,Picape 4x4,1500,Ativo
+Axiom-084,Van,1500,Ativo
+Axiom-085,Van,1500,Ativo
+Axiom-086,Caminhão Pesado,1500,Ativo
+Axiom-087,Picape 4x4,12000,Ativo
+Axiom-088,Picape 4x4,3500,Ativo
+Axiom-089,Van,3500,Ativo
+Axiom-090,Van,1500,Ativo
+Axiom-091,Picape 4x4,12000,Ativo
+Axiom-092,Picape 4x4,1500,Ativo
+Axiom-093,Caminhão Pesado,3500,Ativo
+Axiom-094,Caminhão Pesado,3500,Ativo
+Axiom-095,Van,3500,Ativo
+Axiom-096,Picape 4x4,12000,Ativo
+Axiom-097,Picape 4x4,1500,Ativo
+Axiom-098,Van,3500,Ativo
+Axiom-099,Caminhão Pesado,12000,Ativo
+Axiom-100,Caminhão Pesado,1500,Ativo
+Axiom-101,Picape 4x4,12000,Ativo
+Axiom-102,Caminhão Pesado,12000,Ativo
+Axiom-103,Caminhão Pesado,12000,Ativo
+Axiom-104,Picape 4x4,12000,Ativo
+Axiom-105,Caminhão Pesado,3500,Ativo
+Axiom-106,Van,1500,Ativo
+Axiom-107,Caminhão Pesado,3500,Ativo
+Axiom-108,Picape 4x4,12000,Ativo
+Axiom-109,Caminhão Pesado,1500,Ativo
+Axiom-110,Picape 4x4,3500,Ativo
+Axiom-111,Van,3500,Ativo
+Axiom-112,Picape 4x4,12000,Ativo
+Axiom-113,Van,1500,Ativo
+Axiom-114,Picape 4x4,12000,Ativo
+Axiom-115,Caminhão Pesado,1500,Ativo
+Axiom-116,Van,1500,Ativo
+Axiom-117,Picape 4x4,1500,Ativo
+Axiom-118,Van,1500,Ativo
+Axiom-119,Caminhão Pesado,3500,Ativo
+Axiom-120,Van,1500,Ativo
+Axiom-121,Picape 4x4,3500,Ativo
+Axiom-122,Picape 4x4,1500,Ativo
+Axiom-123,Picape 4x4,3500,Ativo
+Axiom-124,Caminhão Pesado,3500,Ativo
+Axiom-125,Van,3500,Ativo
+Axiom-126,Van,12000,Ativo
+Axiom-127,Van,12000,Ativo
+Axiom-128,Van,1500,Ativo
+Axiom-129,Caminhão Pesado,12000,Ativo
+Axiom-130,Picape 4x4,3500,Ativo
+Axiom-131,Picape 4x4,1500,Ativo
+Axiom-132,Van,1500,Ativo
+Axiom-133,Picape 4x4,1500,Ativo
+Axiom-134,Van,12000,Ativo
+Axiom-135,Van,1500,Ativo
+Axiom-136,Picape 4x4,3500,Ativo
+Axiom-137,Caminhão Pesado,12000,Ativo
+Axiom-138,Caminhão Pesado,3500,Ativo
+Axiom-139,Caminhão Pesado,12000,Ativo
+Axiom-140,Picape 4x4,3500,Ativo
+Axiom-141,Van,12000,Ativo
+Axiom-142,Caminhão Pesado,1500,Ativo
+Axiom-143,Van,12000,Ativo
+Axiom-144,Picape 4x4,1500,Ativo
+Axiom-145,Picape 4x4,1500,Ativo
+Axiom-146,Picape 4x4,1500,Ativo
+Axiom-147,Van,12000,Ativo
+Axiom-148,Picape 4x4,12000,Ativo
+Axiom-149,Picape 4x4,1500,Ativo
+Axiom-150,Picape 4x4,1500,Ativo
+Axiom-151,Picape 4x4,1500,Ativo
+Axiom-152,Picape 4x4,12000,Ativo
+Axiom-153,Picape 4x4,12000,Ativo
+Axiom-154,Van,12000,Ativo
+Axiom-155,Caminhão Pesado,3500,Ativo
+Axiom-156,Picape 4x4,3500,Ativo
+Axiom-157,Van,1500,Ativo
+Axiom-158,Caminhão Pesado,12000,Ativo
+Axiom-159,Picape 4x4,3500,Ativo
+Axiom-160,Picape 4x4,1500,Ativo
+Axiom-161,Van,1500,Ativo
+Axiom-162,Van,1500,Ativo
+Axiom-163,Van,3500,Ativo
+Axiom-164,Caminhão Pesado,12000,Ativo
+Axiom-165,Picape 4x4,3500,Ativo
+Axiom-166,Caminhão Pesado,12000,Ativo
+Axiom-167,Picape 4x4,1500,Ativo
+Axiom-168,Van,1500,Ativo
+Axiom-169,Van,3500,Ativo
+Axiom-170,Van,12000,Ativo
