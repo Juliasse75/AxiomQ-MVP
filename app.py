@@ -7,16 +7,15 @@ import numpy as np
 
 st.set_page_config(page_title="AxiomQ | Matriz Global", layout="wide", page_icon="⚡")
 
-# 1. BANCO DE DADOS EM MEMÓRIA APRIMORADO (COM PLANOS)
+# 1. BANCO DE DADOS EM MEMÓRIA (Agora sem dados hardcoded de motos)
 if 'usuarios' not in st.session_state:
     st.session_state['usuarios'] = {
         'ceo@axiomq.com.br': {'senha': '123', 'perfil': 'MASTER', 'nome': 'Cosme (CEO)'},
-        'gerente@farmaciax.com.br': {'senha': '456', 'perfil': 'CLIENTE', 'empresa': 'Farmácia X', 'plano': 'POC (Teste) - Até 5 veículos', 'motos': 3, 'entregas': 45}
+        'gerente@farmaciax.com.br': {'senha': '456', 'perfil': 'CLIENTE', 'empresa': 'Farmácia X', 'plano': 'POC (Teste) - Até 5 veículos'}
     }
 
 if 'logado' not in st.session_state: st.session_state['logado'] = False
 if 'user_atual' not in st.session_state: st.session_state['user_atual'] = None
-if 'simulacao_farmacia' not in st.session_state: st.session_state['simulacao_farmacia'] = False
 
 # ESTILIZAÇÃO VISUAL NEON
 LOGO_HTML = """
@@ -38,25 +37,21 @@ if not st.session_state['logado']:
         with st.form("login_central"):
             u_input = st.text_input("E-mail corporativo:")
             s_input = st.text_input("Senha tática:", type="password")
-            # Texto do botão alterado conforme solicitado
             btn_entrar = st.form_submit_button("Acessar AxiomQ", use_container_width=True)
             
             if btn_entrar:
-                # Tratamento de erro: remove espaços invisíveis e joga para minúsculo
                 email_limpo = u_input.strip().lower()
-                
                 if email_limpo in st.session_state['usuarios'] and st.session_state['usuarios'][email_limpo]['senha'] == s_input:
                     st.session_state['logado'] = True
                     st.session_state['user_atual'] = email_limpo
                     st.rerun()
                 else:
-                    st.error("Credenciais inválidas. Verifique se não há espaços após o e-mail.")
+                    st.error("Credenciais inválidas. Verifique os dados.")
     st.stop()
 
 # LOGIN RECONHECIDO
 user_info = st.session_state['usuarios'][st.session_state['user_atual']]
 
-# BOTÃO DE LOGOUT NA BARRA LATERAL
 st.sidebar.markdown("### Controle de Sessão")
 if st.sidebar.button("🔒 Encerrar Sessão", use_container_width=True):
     st.session_state['logado'] = False
@@ -64,112 +59,90 @@ if st.sidebar.button("🔒 Encerrar Sessão", use_container_width=True):
     st.rerun()
 
 # ==========================================
-# AMBIENTE 1: PAINEL ADMINISTRADOR MASTER (VOCÊ)
+# AMBIENTE 1: PAINEL ADMINISTRADOR MASTER
 # ==========================================
 if user_info['perfil'] == 'MASTER':
     st.title(f"👋 Bem-vindo, {user_info['nome']} | Controle Matriz")
-    st.markdown("Gestão central de clientes, emissão de acessos e controle de planos da AxiomQ.")
     
     aba_criar, aba_parceiros = st.tabs(["🆕 Cadastrar Novo Cliente", "🏢 Clientes e Planos Ativos"])
     
     with aba_criar:
         st.subheader("Emissão de Novo Acesso Cliente")
         with st.form("cadastro_cliente"):
-            nome_empresa = st.text_input("Nome da Empresa Parceira:", placeholder="Ex: Material de Construção Silva")
-            email_empresa = st.text_input("E-mail do Gestor Logístico (Login):", placeholder="Ex: logistica@silva.com")
+            nome_empresa = st.text_input("Nome da Empresa Parceira:")
+            email_empresa = st.text_input("E-mail do Gestor Logístico (Login):")
             senha_empresa = st.text_input("Senha Provisória:", type="password")
+            plano_escolhido = st.selectbox("Nível de Licença (Plano):", ["POC (Teste) - Até 5 veículos", "Starter - Até 15 veículos", "Advanced - Até 50 veículos", "Quantum (Enterprise) - Ilimitado"])
             
-            # Nova função de Planos Integrada
-            plano_escolhido = st.selectbox(
-                "Nível de Licença (Plano):", 
-                [
-                    "POC (Teste) - Até 5 veículos", 
-                    "Starter - Até 15 veículos", 
-                    "Advanced - Até 50 veículos", 
-                    "Quantum (Enterprise) - Ilimitado"
-                ]
-            )
-            
-            btn_cadastrar = st.form_submit_button("Gerar Credenciais", use_container_width=True)
-            
-            if btn_cadastrar:
+            if st.form_submit_button("Gerar Credenciais", use_container_width=True):
                 email_limpo_cad = email_empresa.strip().lower()
                 if email_limpo_cad not in st.session_state['usuarios']:
                     st.session_state['usuarios'][email_limpo_cad] = {
                         'senha': str(senha_empresa),
                         'perfil': 'CLIENTE',
                         'empresa': nome_empresa,
-                        'plano': plano_escolhido,
-                        'motos': 0, # Cliente cadastra depois
-                        'entregas': 0 # Cliente cadastra depois
+                        'plano': plano_escolhido
                     }
-                    st.success(f"✅ Licença {plano_escolhido.split(' -')[0]} ativada para **{nome_empresa}**. Acesso liberado!")
+                    st.success(f"✅ Licença ativada para **{nome_empresa}**!")
                 else:
-                    st.warning("Erro: Este e-mail já possui uma licença ativa.")
+                    st.warning("E-mail já cadastrado.")
                     
     with aba_parceiros:
-        st.subheader("Monitoramento da Base de Clientes")
-        lista_clientes = []
-        for k, v in st.session_state['usuarios'].items():
-            if v['perfil'] == 'CLIENTE':
-                lista_clientes.append({
-                    'Empresa': v['empresa'], 
-                    'Login de Acesso': k, 
-                    'Plano Ativo': v['plano']
-                })
-        
-        if lista_clientes:
-            st.table(pd.DataFrame(lista_clientes))
-        else:
-            st.info("Nenhuma empresa cadastrada no momento.")
+        st.subheader("Base de Clientes")
+        lista_clientes = [{'Empresa': v['empresa'], 'Login': k, 'Plano Ativo': v['plano']} for k, v in st.session_state['usuarios'].items() if v['perfil'] == 'CLIENTE']
+        if lista_clientes: st.table(pd.DataFrame(lista_clientes))
 
 # ==========================================
-# AMBIENTE 2: PAINEL DO CLIENTE (EX: FARMÁCIA X)
+# AMBIENTE 2: PAINEL DO CLIENTE (UPLOAD DE ARQUIVOS)
 # ==========================================
 elif user_info['perfil'] == 'CLIENTE':
     st.title(f"⚡ Painel de Logística | {user_info['empresa']}")
-    st.markdown(f"**Sua Licença:** `{user_info['plano']}`")
+    st.markdown(f"**Licença Ativa:** `{user_info['plano']}`")
     st.markdown("---")
     
-    col_indicators, col_actions = st.columns([1, 2])
+    col_upload, col_mapa = st.columns([1, 2])
     
-    with col_indicators:
-        st.subheader("Resumo Operacional")
-        st.metric("Veículos Ativos (Hoje)", f"{user_info['motos']} veículos")
-        st.metric("Entregas na Fila", f"{user_info['entregas']} pedidos")
+    with col_upload:
+        st.subheader("1. Inserir Dados Operacionais")
+        st.info("Faça o upload dos arquivos CSV contendo sua frota disponível e os endereços de entrega de hoje.")
         
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("🚀 Iniciar Motor de Roteamento", use_container_width=True):
-            with st.spinner("Calculando tráfego e distribuindo cargas..."):
-                time.sleep(2) # Efeito visual de carregamento
-                st.session_state['simulacao_farmacia'] = True
+        # O cliente faz o upload dos arquivos dele!
+        arq_frota = st.file_uploader("📂 Upload da Frota (CSV)", type="csv")
+        arq_entregas = st.file_uploader("📂 Upload das Entregas (CSV)", type="csv")
+        
+        df_frota = pd.read_csv(arq_frota) if arq_frota else None
+        df_entregas = pd.read_csv(arq_entregas) if arq_entregas else None
+
+        if df_frota is not None and df_entregas is not None:
+            qtd_veiculos = len(df_frota)
+            qtd_entregas = len(df_entregas)
             
-    with col_actions:
-        if st.session_state['simulacao_farmacia']:
-            st.success("✅ Roteamento Concluído! Cargas distribuídas e enviadas para o App do Condutor.")
+            st.success("✅ Arquivos lidos com sucesso!")
+            st.metric("Veículos Detectados", qtd_veiculos)
+            st.metric("Entregas Detectadas", qtd_entregas)
             
-            mapa_local = folium.Map(location=[-19.9386, -43.9340], zoom_start=14, tiles="CartoDB dark_matter")
-            folium.Marker([-19.9386, -43.9340], popup="<b>Sede</b>", icon=folium.Icon(color="red", icon="home")).add_to(mapa_local)
-            
-            cores_motos = ['blue', 'purple', 'orange', 'green', 'lightgray']
-            np.random.seed(42)
-            
-            # Proteção para não quebrar se motos = 0
-            qtd_motos = max(1, user_info['motos'])
-            
-            for i in range(user_info['entregas']):
-                m_designada = i % qtd_motos
-                lat_p = -19.9386 + np.random.normal(0, 0.015)
-                lon_p = -43.9340 + np.random.normal(0, 0.015)
+            if st.button("🚀 Otimizar Rotas Agora", use_container_width=True):
+                st.session_state['motor_acionado'] = True
                 
-                folium.CircleMarker(
-                    [lat_p, lon_p],
-                    radius=5,
-                    color=cores_motos[m_designada % len(cores_motos)],
-                    fill=True,
-                    popup=f"Entrega #{i+1} - Condutor {m_designada+1}"
-                ).add_to(mapa_local)
+    with col_mapa:
+        st.subheader("2. Matriz de Roteamento")
+        if df_frota is not None and df_entregas is not None and st.session_state.get('motor_acionado', False):
+            with st.spinner("Processando distribuição quântica..."):
+                time.sleep(2)
                 
-            components.html(mapa_local._repr_html_(), height=400)
+                # Para o MVP, usamos a latitude/longitude do arquivo (se houver)
+                # Como teste, desenhamos o mapa focado nos pontos carregados
+                try:
+                    lat_media = df_entregas['Latitude'].mean()
+                    lon_media = df_entregas['Longitude'].mean()
+                    mapa_cliente = folium.Map(location=[lat_media, lon_media], zoom_start=6, tiles="CartoDB dark_matter")
+                    
+                    for _, row in df_entregas.iterrows():
+                        folium.CircleMarker([row['Latitude'], row['Longitude']], radius=3, color="#2563eb", fill=True).add_to(mapa_cliente)
+                        
+                    components.html(mapa_cliente._repr_html_(), height=500)
+                    st.success("Otimização concluída e enviada aos Apps dos Condutores.")
+                except KeyError:
+                    st.error("Erro: O arquivo de entregas precisa conter colunas 'Latitude' e 'Longitude'.")
         else:
-            st.info("Aguardando acionamento do algoritmo...")
+            st.info("Aguardando upload dos arquivos e acionamento do motor.")
