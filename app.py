@@ -3,111 +3,149 @@ import streamlit.components.v1 as components
 import pandas as pd
 import folium
 import time
-import os
+import numpy as np
 
-st.set_page_config(page_title="AxiomQ | Matriz MG", layout="wide", page_icon="🚛")
+st.set_page_config(page_title="AxiomQ | Matriz Global", layout="wide", page_icon="⚡")
 
-if 'authenticated' not in st.session_state: st.session_state['authenticated'] = False
-if 'df_frota' not in st.session_state: st.session_state['df_frota'] = None
-if 'df_entregas' not in st.session_state: st.session_state['df_entregas'] = None
-if 'executar_rotas' not in st.session_state: st.session_state['executar_rotas'] = False
+# 1. ESTRUTURA DE BANCO DE DADOS EM MEMÓRIA (SISTEMA DE USUÁRIOS)
+if 'usuarios' not in st.session_state:
+    st.session_state['usuarios'] = {
+        'ceo@axiomq.com.br': {'senha': '123', 'perfil': 'MASTER', 'nome': 'Cosme (CEO)'},
+        'gerente@farmaciax.com.br': {'senha': '456', 'perfil': 'CLIENTE', 'empresa': 'Farmácia X', 'motos': 3, 'entregas': 45}
+    }
 
+if 'logado' not in st.session_state: st.session_state['logado'] = False
+if 'user_atual' not in st.session_state: st.session_state['user_atual'] = None
+if 'simulacao_farmacia' not in st.session_state: st.session_state['simulacao_farmacia'] = False
+
+# ESTILIZAÇÃO VISUAL NEON
 LOGO_HTML = """
 <div style="text-align: center; margin-bottom: 20px;">
-    <h1 style="font-size: 60px; font-weight: 800; color: white; margin: 0; text-shadow: 0 0 15px #2563eb, 0 0 30px #8b5cf6;">Axiom<span style="color: #2563eb;">Q</span></h1>
-    <p style="color: #8b5cf6; font-size: 16px; letter-spacing: 4px; margin: 0;">LOGÍSTICA QUÂNTICA</p>
+    <h1 style="font-size: 50px; font-weight: 800; color: white; margin: 0; text-shadow: 0 0 15px #2563eb, 0 0 30px #8b5cf6;">Axiom<span style="color: #2563eb;">Q</span></h1>
+    <p style="color: #8b5cf6; font-size: 14px; letter-spacing: 4px; margin: 0;">SISTEMA MATRIZ DE CONTROLE</p>
 </div>
 """
 
-if not st.session_state['authenticated']:
-    col1, col2, col3 = st.columns([1, 2, 1])
+# ==========================================
+# TELA DE AUTENTICAÇÃO UNIFICADA
+# ==========================================
+if not st.session_state['logado']:
+    col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         st.write("<br><br>", unsafe_allow_html=True)
         st.markdown(LOGO_HTML, unsafe_allow_html=True)
-        st.markdown("<h3 style='text-align: center; color: #94a3b8;'>Acesso Corporativo</h3>", unsafe_allow_html=True)
         
-        user = st.text_input("E-mail corporativo:", placeholder="ceo@axiomq.com.br")
-        senha = st.text_input("Senha tática:", type="password")
-        
-        if st.button("Acessar Matriz MG", use_container_width=True):
-            if user == "ceo@axiomq.com.br" and senha == "LogisticaQuantica2024":
-                st.session_state['authenticated'] = True
-                st.rerun()
-            else:
-                st.error("Credenciais inválidas.")
+        with st.form("login_central"):
+            u_input = st.text_input("E-mail de Acesso:")
+            s_input = st.text_input("Senha Tática:", type="password")
+            btn_entrar = st.form_submit_button("Autenticar no Núcleo", use_container_width=True)
+            
+            if btn_entrar:
+                if u_input in st.session_state['usuarios'] and st.session_state['usuarios'][u_input]['senha'] == s_input:
+                    st.session_state['logado'] = True
+                    st.session_state['user_atual'] = u_input
+                    st.rerun()
+                else:
+                    st.error("Acesso negado. Credenciais incorretas.")
     st.stop()
 
-col_logo, col_titulo = st.columns([1, 4])
-with col_logo:
-    st.markdown(LOGO_HTML, unsafe_allow_html=True)
-with col_titulo:
-    st.title("Centro de Comando Estadual - Minas Gerais")
+# LOGIN RECONHECIDO
+user_info = st.session_state['usuarios'][st.session_state['user_atual']]
 
-aba_gestor, aba_frota, aba_panico, aba_motorista = st.tabs([
-    "📊 1. Painel de Despacho", "🚛 2. Gestão de Frota", "🚨 3. Resposta Tática", "📱 4. App do Motorista"
-])
+# BOTO DE LOGOUT
+if st.sidebar.button("🔒 Encerrar Sessão"):
+    st.session_state['logado'] = False
+    st.session_state['user_atual'] = None
+    st.rerun()
 
-with aba_gestor:
-    col_dados, col_mapa = st.columns([1, 2])
+# ==========================================
+# AMBIENTE 1: PAINEL ADMINISTRADOR MASTER (VOCÊ)
+# ==========================================
+if user_info['perfil'] == 'MASTER':
+    st.title(f"👋 Olá, {user_info['nome']} | Painel do Administrador")
+    st.markdown("Aqui você gerencia suas contas parceiras e cria acessos para os testes em campo.")
     
-    with col_dados:
-        st.subheader("1. Carregamento de Dados")
-        if st.button("⚡ Auto-Carregar Simulação (170 Veíc / 1200 Pts)", use_container_width=True):
-            if os.path.exists('frota_170.csv') and os.path.exists('entregas_1200_mg.csv'):
-                st.session_state['df_frota'] = pd.read_csv('frota_170.csv')
-                st.session_state['df_entregas'] = pd.read_csv('entregas_1200_mg.csv')
-                st.success("Matriz injetada com sucesso no núcleo!")
-            else:
-                st.error("Arquivos CSV não encontrados no servidor.")
-
-        st.markdown("---")
+    aba_criar, aba_parceiros = st.tabs(["🆕 Cadastrar Empresa Parceira", "🏢 Empresas Ativas"])
+    
+    with aba_criar:
+        st.subheader("Configurar Novo Cliente no Sistema")
+        with st.form("cadastro_cliente"):
+            nome_empresa = st.text_input("Nome da Empresa:", placeholder="Ex: Farmácia X")
+            email_empresa = st.text_input("E-mail do Gestor Logístico:", placeholder="Ex: gerente@farmacia.com")
+            senha_empresa = st.text_input("Senha Provisória de Acesso:", type="password")
+            c_motos = st.number_input("Quantidade de Veículos/Motos:", min_value=1, value=3)
+            
+            btn_cadastrar = st.form_submit_button("Gerar Credenciais e Ativar Plataforma", use_container_width=True)
+            
+            if btn_cadastrar:
+                if email_empresa not in st.session_state['usuarios']:
+                    st.session_state['usuarios'][email_empresa] = {
+                        'senha': str(senha_empresa),
+                        'perfil': 'CLIENTE',
+                        'empresa': nome_empresa,
+                        'motos': c_motos,
+                        'entregas': 30
+                    }
+                    st.success(f"✅ Sucesso! Conta para **{nome_empresa}** gerada. Envie o e-mail e senha para o cliente.")
+                else:
+                    st.warning("Este e-mail já está cadastrado no sistema.")
+                    
+    with aba_parceiros:
+        st.subheader("Monitoramento de Clientes na Fase de Testes")
+        # Transforma o dicionário em tabela para visualização fácil
+        lista_clientes = []
+        for k, v in st.session_state['usuarios'].items():
+            if v['perfil'] == 'CLIENTE':
+                lista_clientes.append({'Empresa/Cliente': v['empresa'], 'E-mail do Gestor': k, 'Frota Alocada': f"{v['motos']} Veículos", 'Status da POC': 'Em Teste (1 Mês)'})
         
-        if st.session_state['df_frota'] is not None and st.session_state['df_entregas'] is not None:
-            cap = st.session_state['df_frota']['Capacidade_KG'].sum()
-            peso = st.session_state['df_entregas']['Peso_Carga_KG'].sum()
-            
-            st.metric("Capacidade Total da Frota", f"{cap:,} KG")
-            st.metric("Peso Total da Carga (MG)", f"{peso:,} KG")
-            
-            if peso > cap:
-                st.warning(f"⚠️ Défice de Frota detectado. {peso - cap:,} KG passarão para a Fila de 2ª Onda.")
-            else:
-                st.success("✅ Frota comporta a operação.")
-            
-            if st.button("🚀 Acionar Motor Quântico AxiomQ", use_container_width=True):
-                with st.spinner("Analisando topografia em MG..."):
-                    time.sleep(3)
-                    st.session_state['executar_rotas'] = True
+        if lista_clientes:
+            st.table(pd.DataFrame(lista_clientes))
+        else:
+            st.info("Nenhum parceiro de campo ativo ainda.")
 
-    with col_mapa:
-        st.subheader("2. Matriz Tática de Terreno")
-        if st.session_state['executar_rotas']:
-            mapa = folium.Map(location=[-18.5122, -44.5550], zoom_start=6, tiles="CartoDB dark_matter")
-            hubs = {"Belo Horizonte": [-19.91, -43.93], "Uberlândia": [-18.91, -48.27], "Gov. Valadares": [-18.85, -41.94], "Montes Claros": [-16.73, -43.86], "Juiz de Fora": [-21.76, -43.35]}
-            for h, coord in hubs.items():
-                folium.Marker(coord, popup=f"<b>Hub Central {h}</b>", icon=folium.Icon(color="red", icon="home")).add_to(mapa)
+# ==========================================
+# AMBIENTE 2: PAINEL DO CLIENTE (EX: FARMÁCIA X)
+# ==========================================
+elif user_info['perfil'] == 'CLIENTE':
+    st.title(f"⚡ Painel de Controle | {user_info['empresa']}")
+    st.subheader("Módulo de Otimização de Rotas de Alta Performance")
+    
+    col_indicators, col_actions = st.columns([1, 2])
+    
+    with col_indicators:
+        st.metric("Sua Frota Ativa", f"{user_info['motos']} Motocicletas")
+        st.metric("Entregas Agendadas (Hoje)", f"{user_info['entregas']} Pedidos")
+        
+        if st.button("🚀 Otimizar Entregas da Farmácia", use_container_width=True):
+            st.session_state['simulacao_farmacia'] = True
             
-            df = st.session_state['df_entregas']
-            for _, r in df.iterrows():
-                folium.CircleMarker([r['Latitude'], r['Longitude']], radius=1.5, color="#2563eb", fill=True).add_to(mapa)
+    with col_actions:
+        if st.session_state['simulacao_farmacia']:
+            st.success("Algoritmo Concluído! Rotas distribuídas igualmente entre as 3 motocicletas.")
             
-            components.html(mapa._repr_html_(), height=550)
-            st.success("Operação distribuída. Frotas despachadas.")
-
-with aba_frota:
-    st.subheader("Painel de Gestão: Frota Ativa")
-    if st.session_state['df_frota'] is not None:
-        st.dataframe(st.session_state['df_frota'], use_container_width=True, height=500)
-
-with aba_panico:
-    st.error("🚨 Terminal de Resposta a Avarias")
-    st.selectbox("Veículo Desabilitado (GPS Report):", ["Axiom-042 (Rodovia Fernão Dias)", "Axiom-115 (BR-381)", "Axiom-003 (Urbano BH)"])
-    if st.button("⚡ Executar Resgate Dinâmico via IA"):
-        st.success("Transbordo calculado. Veículo de apoio despachado.")
-
-with aba_motorista:
-    st.markdown("### 📱 Simulador: Tela do Condutor")
-    st.info("📍 **Destino:** Mercado Regional de Montes Claros\n📦 **Carga:** 1.200 KG\n⏰ **Prazo:** 16:30")
-    st.file_uploader("Upload do canhoto assinado:", type=["png", "jpg"])
-    if st.button("✅ Confirmar Entrega e Transmitir"):
-        st.success("Canhoto assinado e armazenado na nuvem. Rota atualizada.")
+            # Geração de mapa local simulado (Simulando entregas de bairro próximas ao centro)
+            mapa_local = folium.Map(location=[-19.9386, -43.9340], zoom_start=14, tiles="CartoDB positron")
+            
+            # Ponto da Farmácia (Sede)
+            folium.Marker([-19.9386, -43.9340], popup="<b>Farmácia X - Sede</b>", icon=folium.Icon(color="red", icon="plus")).add_to(mapa_local)
+            
+            # 3 cores diferentes para representar as 3 motos
+            cores_motos = ['blue', 'purple', 'orange']
+            np.random.seed(10)
+            
+            for i in range(user_info['entregas']):
+                m_designada = i % user_info['motos']
+                lat_p = -19.9386 + np.random.normal(0, 0.01)
+                lon_p = -43.9340 + np.random.normal(0, 0.01)
+                
+                folium.CircleMarker(
+                    [lat_p, lon_p],
+                    radius=5,
+                    color=cores_motos[m_designada],
+                    fill=True,
+                    popup=f"Entrega #{i+1} - Moto {m_designada+1}"
+                ).add_to(mapa_local)
+                
+            components.html(mapa_local._repr_html_(), height=450)
+        else:
+            st.info("Aguardando acionamento do motor para desenhar o mapa de entregas de medicamentos do dia.")
