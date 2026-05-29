@@ -34,14 +34,20 @@ if 'planos' not in st.session_state:
         "Quantum (Enterprise) - Ilimitado": "Ilimitado"
     }
 
-LISTA_MODAIS = ["Carro Leve", "Picape 4x4", "Van", "Caminhão Pesado", "Motocicleta"]
-
 if 'frotas' not in st.session_state:
     st.session_state['frotas'] = {
         'gerente@farmaciax.com.br': [
             {"ID_Veiculo": "Moto-01", "Tipo": "Motocicleta", "Capacidade_KG": 100, "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"},
             {"ID_Veiculo": "Moto-02", "Tipo": "Motocicleta", "Capacidade_KG": 100, "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"},
             {"ID_Veiculo": "Moto-03", "Tipo": "Motocicleta", "Capacidade_KG": 100, "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"}
+        ]
+    }
+
+# NOVO: Banco de dados de Condutores/RH por cliente
+if 'condutores' not in st.session_state:
+    st.session_state['condutores'] = {
+        'gerente@farmaciax.com.br': [
+            {"Nome": "Marcos Entregador", "CPF": "111.222.333-44", "RG": "MG-12.345.678", "CNH": "987654321", "Venc_CNH": "20/12/2028", "Endereço": "Av. Afonso Pena, Centro - BH", "Email": "condutor01@farmaciax.com.br", "Veiculo": "Moto-01"}
         ]
     }
 
@@ -53,6 +59,8 @@ if 'rotas_por_veiculo_global' not in st.session_state: st.session_state['rotas_p
 if 'logado' not in st.session_state: st.session_state['logado'] = False
 if 'user_atual' not in st.session_state: st.session_state['user_atual'] = None
 
+LISTA_MODAIS = ["Carro Leve", "Picape 4x4", "Van", "Caminhão Pesado", "Motocicleta"]
+
 LOGO_HTML = """
 <div style="text-align: center; margin-bottom: 20px;">
     <h1 style="font-size: 50px; font-weight: 800; color: white; margin: 0; text-shadow: 0 0 15px #2563eb, 0 0 30px #8b5cf6;">Axiom<span style="color: #2563eb;">Q</span></h1>
@@ -60,9 +68,7 @@ LOGO_HTML = """
 </div>
 """
 
-# ==========================================
 # TELA DE AUTENTICAÇÃO CENTRAL
-# ==========================================
 if not st.session_state['logado']:
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
@@ -91,11 +97,10 @@ if st.sidebar.button("🔒 Encerrar Sessão", use_container_width=True):
     st.rerun()
 
 # ==========================================
-# AMBIENTE MASTER: ADMINISTRADOR (COMPLETO)
+# AMBIENTE MASTER: ADMINISTRADOR
 # ==========================================
 if user_info['perfil'] == 'MASTER':
     st.title(f"👋 Bem-vindo, {user_info['nome']} | Controle Matriz")
-    
     aba_criar, aba_parceiros, aba_planos = st.tabs(["🆕 Cadastrar Parceiro", "🏢 Gestão de Clientes", "⚙️ Configurar Planos"])
     
     with aba_criar:
@@ -121,6 +126,7 @@ if user_info['perfil'] == 'MASTER':
                     }
                     st.session_state['usuarios'][email_limpo_cad] = {'senha': str(senha_provisoria), 'perfil': 'CLIENTE'}
                     st.session_state['frotas'][email_limpo_cad] = []
+                    st.session_state['condutores'][email_limpo_cad] = []
                     st.success(f"✅ Parceiro {nome} registrado com sucesso!")
                     st.rerun()
 
@@ -129,7 +135,6 @@ if user_info['perfil'] == 'MASTER':
         if st.session_state['clientes']:
             dados_tabela = [{"Login/E-mail": k, "Empresa": v["Empresa"], "CNPJ": v["CNPJ"], "Telefone": v["Telefone"], "Plano": v["Plano"], "Vencimento": v["Vencimento"], "Status": v["Status"]} for k, v in st.session_state['clientes'].items()]
             st.table(pd.DataFrame(dados_tabela))
-            
             st.markdown("---")
             st.subheader("🛠️ Central de Moderação Tática")
             cliente_sel = st.selectbox("Selecione o Cliente para Modificar:", list(st.session_state['clientes'].keys()))
@@ -139,7 +144,6 @@ if user_info['perfil'] == 'MASTER':
                 status_atual = c_info["Status"]
                 novo_status = "Bloqueado" if status_atual == "Ativo" else "Ativo"
                 label_blq = "🔒 Bloquear Acesso" if status_atual == "Ativo" else "🔓 Desbloquear e Ativar"
-                
                 if col_btn1.button(label_blq, use_container_width=True):
                     st.session_state['clientes'][cliente_sel]["Status"] = novo_status
                     st.rerun()
@@ -147,39 +151,28 @@ if user_info['perfil'] == 'MASTER':
                     del st.session_state['clientes'][cliente_sel]
                     del st.session_state['usuarios'][cliente_sel]
                     if cliente_sel in st.session_state['frotas']: del st.session_state['frotas'][cliente_sel]
+                    if cliente_sel in st.session_state['condutores']: del st.session_state['condutores'][cliente_sel]
                     st.rerun()
                     
-    # --- NOVO: ABA DE PLANOS EXPANDIDA (ADICIONAR E EDITAR SELECIONANDO) ---
     with aba_planos:
-        st.subheader("⚙️ Editor e Criador Dinâmico de Planos AxiomQ")
-        st.markdown("Escolha um plano para atualizar ou selecione a opção de criar um novo nível de licença.")
-        
+        st.subheader("⚙️ Editor e Criador Dinâmico de Planos")
         lista_planos_existentes = list(st.session_state['planos'].keys())
         plano_selecionado_ed = st.selectbox("Ação de Planos:", ["-- Criar Novo Plano --"] + lista_planos_existentes)
-        
         with st.form("form_planos_dinamico"):
             if plano_selecionado_ed == "-- Criar Novo Plano --":
-                nome_plano_input = st.text_input("Nome do Novo Plano (Ex: Plano Platinum):")
-                desc_plano_input = st.text_input("Descrição / Restrição de Frota (Ex: Até 100 veículos):")
+                nome_plano_input = st.text_input("Nome do Novo Plano:")
+                desc_plano_input = st.text_input("Descrição / Restrição de Frota:")
             else:
-                nome_plano_input = st.text_input("Plano Selecionado (Nome Fixo):", value=plano_selecionado_ed, disabled=True)
-                desc_plano_input = st.text_input("Modificar Descrição / Restrição de Frota:", value=st.session_state['planos'][plano_selecionado_ed])
-                
+                nome_plano_input = st.text_input("Plano Selecionado:", value=plano_selecionado_ed, disabled=True)
+                desc_plano_input = st.text_input("Modificar Descrição / Restrição:", value=st.session_state['planos'][plano_selecionado_ed])
             if st.form_submit_button("💾 Gravar Configuração do Plano", use_container_width=True):
                 if desc_plano_input:
                     if plano_selecionado_ed == "-- Criar Novo Plano --" and nome_plano_input:
                         st.session_state['planos'][nome_plano_input] = desc_plano_input
-                        st.success(f"✅ Novo plano '{nome_plano_input}' integrado com sucesso!")
                     else:
                         st.session_state['planos'][plano_selecionado_ed] = desc_plano_input
-                        st.success(f"✅ Licença '{plano_selecionado_ed}' atualizada na Matriz!")
-                    time.sleep(0.5)
+                    st.success("Plano salvo!")
                     st.rerun()
-        
-        st.markdown("---")
-        st.markdown("**Grade Atual de Planos Disponíveis:**")
-        for p, d in st.session_state['planos'].items():
-            st.write(f"⚡ **{p}**: {d}")
 
 # ==========================================
 # AMBIENTE CLIENTE: PORTAL DO GESTOR DA FARMÁCIA
@@ -189,116 +182,198 @@ elif user_info['perfil'] == 'CLIENTE':
     c_dados = st.session_state['clientes'][client_email]
     
     st.title(f"⚡ Painel de Logística | {c_dados['Empresa']}")
-    st.markdown(f"**Licença Ativa:** `{c_dados['Plano']}` | **Status:** `CONEXÃO OPERACIONAL ATIVA`")
+    st.markdown(f"**Licença Ativa:** `{c_dados['Plano']}`")
     st.markdown("---")
     
-    aba_frota_cli, aba_roteiro_cli = st.tabs(["# 🚛 1. Gerenciar Frota Ativa", "📦 2. Roteirizar Entregas"])
+    aba_frota_cli, aba_roteiro_cli = st.tabs(["🚛 1. Gerenciar Frota e Condutores", "📦 2. Roteirizar Entregas"])
     
-    # --- ABA 1: GESTÃO DE FROTA (RESTAURADA E EXPANDIDA) ---
     with aba_frota_cli:
-        st.subheader("Controle de Ativos e Disponibilidade de Veículos")
-        col_up_frota, col_lista_frota = st.columns([1, 2])
+        sub_aba_veiculos, sub_aba_condutores = st.tabs(["📋 Controle de Veículos", "👥 Gestão de Condutores (RH)"])
         
-        with col_up_frota:
-            st.markdown("### 📥 Carga Inicial de Frota")
-            arq_f = st.file_uploader("Upload da Frota (CSV)", type="csv", key="frota_uploader")
-            if arq_f:
-                if st.button("🔄 Processar e Integrar Planilha", use_container_width=True):
-                    df_f_uploaded = pd.read_csv(arq_f)
-                    nova_frota = []
-                    for _, r in df_f_uploaded.iterrows():
-                        tipo_planilha = str(r.get('Tipo', 'Carro Leve'))
-                        if tipo_planilha not in LISTA_MODAIS: tipo_planilha = "Carro Leve"
-                        # Inicializa com colunas mecânicas padrão
-                        nova_frota.append({
-                            "ID_Veiculo": str(r.get('ID_Veiculo', f"VEIC-{_}")),
-                            "Tipo": tipo_planilha,
-                            "Capacidade_KG": int(r.get('Capacidade_KG', 500)),
-                            "Status": "Disponível",
-                            "Defeito": "-",
-                            "Data_Inatividade": "-"
-                        })
-                    st.session_state['frotas'][client_email] = nova_frota
-                    st.success(f"✅ Frota de campo integrada com sucesso!")
-                    time.sleep(1)
-                    st.rerun()
-            
-            st.markdown("---")
-            st.markdown("### ➕ Incluir Veículo Avulso")
-            with st.form("add_avulso"):
-                id_v = st.text_input("Identificação do Veículo (Prefixo/Placa):")
-                tipo_v = st.selectbox("Modal / Tipo:", LISTA_MODAIS)
-                cap_v = st.number_input("Capacidade de Carga (KG):", min_value=1, value=500)
-                if st.form_submit_button("Adicionar à Frota Ativa", use_container_width=True):
-                    if id_v:
-                        st.session_state['frotas'][client_email].append({
-                            "ID_Veiculo": id_v, "Tipo": tipo_v, "Capacidade_KG": int(cap_v), 
-                            "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"
-                        })
-                        st.success(f"Veículo {id_v} incluído!")
-                        time.sleep(0.5)
+        # --- SUB-ABA 1: CONTROLE DE VEÍCULOS ---
+        with sub_aba_veiculos:
+            col_up_frota, col_lista_frota = st.columns([1, 2])
+            with col_up_frota:
+                st.markdown("### 📥 Carga Inicial de Frota")
+                arq_f = st.file_uploader("Upload da Frota (CSV)", type="csv", key="frota_uploader")
+                if arq_f:
+                    if st.button("🔄 Processar e Integrar Planilha", use_container_width=True):
+                        df_f_uploaded = pd.read_csv(arq_f)
+                        nova_frota = []
+                        for _, r in df_f_uploaded.iterrows():
+                            tipo_planilha = str(r.get('Tipo', 'Carro Leve'))
+                            if tipo_planilha not in LISTA_MODAIS: tipo_planilha = "Carro Leve"
+                            nova_frota.append({
+                                "ID_Veiculo": str(r.get('ID_Veiculo', f"VEIC-{_}")), "Tipo": tipo_planilha,
+                                "Capacidade_KG": int(r.get('Capacidade_KG', 500)), "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"
+                            })
+                        st.session_state['frotas'][client_email] = nova_frota
+                        st.success(f"✅ Frota integrada com sucesso!")
                         st.rerun()
-        
-        with col_lista_frota:
-            st.markdown("### 📋 Frota Registrada no Sistema")
-            frota_atual = st.session_state['frotas'].get(client_email, [])
-            
-            if frota_atual:
-                df_frota_visu = pd.DataFrame(frota_atual)
-                st.dataframe(df_frota_visu, use_container_width=True)
-                
-                csv_data = df_frota_visu.to_csv(index=False, sep=';', encoding='utf-8-sig')
-                st.download_button(label="📥 Exportar Frota Atual (Excel BR)", data=csv_data, file_name="frota_axiomq.csv", mime="text/csv", use_container_width=True)
                 
                 st.markdown("---")
-                st.markdown("### 🛠️ Modificar Veículo Individual")
-                v_selecionado = st.selectbox("Escolha o veículo para alterar:", [v["ID_Veiculo"] for v in frota_atual])
-                
-                if v_selecionado:
-                    idx = next(i for i, v in enumerate(frota_atual) if v["ID_Veiculo"] == v_selecionado)
-                    v_dados = frota_atual[idx]
-                    col_edit1, col_edit2 = st.columns(2)
+                st.markdown("### ➕ Incluir Veículo Avulso")
+                with st.form("add_avulso"):
+                    id_v = st.text_input("Identificação do Veículo (Prefixo/Placa):")
+                    tipo_v = st.selectbox("Modal / Tipo:", LISTA_MODAIS)
+                    cap_v = st.number_input("Capacidade de Carga (KG):", min_value=1, value=500)
+                    if st.form_submit_button("Adicionar à Frota Ativa", use_container_width=True):
+                        if id_v:
+                            st.session_state['frotas'][client_email].append({"ID_Veiculo": id_v, "Tipo": tipo_v, "Capacidade_KG": int(cap_v), "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"})
+                            st.success(f"Veículo {id_v} incluído!")
+                            st.rerun()
+            
+            with col_lista_frota:
+                st.markdown("### 📋 Frota Registrada no Sistema")
+                frota_atual = st.session_state['frotas'].get(client_email, [])
+                if frota_atual:
+                    df_frota_visu = pd.DataFrame(frota_atual)
+                    st.dataframe(df_frota_visu, use_container_width=True)
                     
-                    lbl_status = "🔴 Deixar Indisponível" if v_dados["Status"] == "Disponível" else "🟢 Ativar Veículo"
-                    n_stat = "Indisponível" if v_dados["Status"] == "Disponível" else "Disponível"
+                    csv_data = df_frota_visu.to_csv(index=False, sep=';', encoding='utf-8-sig')
+                    st.download_button(label="📥 Exportar Frota Atual (Excel BR)", data=csv_data, file_name="frota_axiomq.csv", mime="text/csv", use_container_width=True)
                     
-                    if col_edit1.button(lbl_status, use_container_width=True):
-                        st.session_state['frotas'][client_email][idx]["Status"] = n_stat
-                        # Carimba automaticamente a data e defeito padrão se for para indisponível
-                        if n_stat == "Indisponível":
-                            st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = time.strftime("%d/%m/%Y")
-                            st.session_state['frotas'][client_email][idx]["Defeito"] = "Aguardando diagnóstico detalhado"
-                        else:
-                            st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = "-"
-                            st.session_state['frotas'][client_email][idx]["Defeito"] = "-"
-                        st.rerun()
+                    st.markdown("---")
+                    st.markdown("### 🛠️ Modificar Veículo Individual")
+                    v_selecionado = st.selectbox("Escolha o veículo para alterar:", [v["ID_Veiculo"] for v in frota_atual])
+                    if v_selecionado:
+                        idx = next(i for i, v in enumerate(frota_atual) if v["ID_Veiculo"] == v_selecionado)
+                        v_dados = frota_atual[idx]
+                        col_edit1, col_edit2 = st.columns(2)
+                        lbl_status = "🔴 Deixar Indisponível" if v_dados["Status"] == "Disponível" else "🟢 Ativar Veículo"
+                        n_stat = "Indisponível" if v_dados["Status"] == "Disponível" else "Disponível"
                         
-                    if col_edit2.button("🗑️ Remover da Frota", use_container_width=True):
-                        st.session_state['frotas'][client_email].pop(idx)
-                        st.rerun()
-                    
-                    # --- NOVO: FORMULÁRIO DE DETALHES MECÂNICOS COM OBS DE DEFEITO E DATA DE ENTRADA ---
-                    with st.expander("📝 Editar Detalhes Mecânicos Avançados"):
-                        with st.form("edit_mec"):
-                            novo_tipo = st.selectbox("Alterar Tipo:", LISTA_MODAIS, index=LISTA_MODAIS.index(v_dados["Tipo"]) if v_dados["Tipo"] in LISTA_MODAIS else 0)
-                            nova_cap = st.number_input("Nova Capacidade (KG):", value=v_dados["Capacidade_KG"])
+                        if col_edit1.button(lbl_status, use_container_width=True):
+                            st.session_state['frotas'][client_email][idx]["Status"] = n_stat
+                            if n_stat == "Indisponível":
+                                st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = time.strftime("%d/%m/%Y")
+                                st.session_state['frotas'][client_email][idx]["Defeito"] = "Aguardando diagnóstico detalhado"
+                            else:
+                                st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = "-"
+                                st.session_state['frotas'][client_email][idx]["Defeito"] = "-"
+                            st.rerun()
                             
-                            st.markdown("**Registro de Ocorrências e Inatividade:**")
-                            novo_defeito = st.text_area("Observação / Defeito do Veículo:", value=v_dados.get("Defeito", "-"))
-                            nova_data_inativ = st.text_input("Data de Entrada no Status Indisponível (dd/mm/aaaa):", value=v_dados.get("Data_Inatividade", "-"))
-                            
-                            if st.form_submit_button("Salvar Alterações Mecânicas", use_container_width=True):
-                                st.session_state['frotas'][client_email][idx]["Tipo"] = novo_tipo
-                                st.session_state['frotas'][client_email][idx]["Capacidade_KG"] = int(nova_cap)
-                                st.session_state['frotas'][client_email][idx]["Defeito"] = novo_defeito
-                                st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = nova_data_inativ
-                                st.success("✅ Histórico mecânico gravado com sucesso na frota ativa!")
-                                time.sleep(0.5)
-                                st.rerun()
-            else:
-                st.warning("Nenhum veículo cadastrado.")
+                        if col_edit2.button("🗑️ Remover da Frota", use_container_width=True):
+                            st.session_state['frotas'][client_email].pop(idx)
+                            st.rerun()
+                        
+                        with st.expander("📝 Editar Detalhes Mecânicos Avançados"):
+                            with st.form("edit_mec"):
+                                novo_tipo = st.selectbox("Alterar Tipo:", LISTA_MODAIS, index=LISTA_MODAIS.index(v_dados["Tipo"]) if v_dados["Tipo"] in LISTA_MODAIS else 0)
+                                nova_cap = st.number_input("Nova Capacidade (KG):", value=v_dados["Capacidade_KG"])
+                                novo_defeito = st.text_area("Observação / Defeito do Veículo:", value=v_dados.get("Defeito", "-"))
+                                nova_data_inativ = st.text_input("Data de Entrada no Status Indisponível (dd/mm/aaaa):", value=v_dados.get("Data_Inatividade", "-"))
+                                if st.form_submit_button("Salvar Alterações Mecânicas", use_container_width=True):
+                                    st.session_state['frotas'][client_email][idx]["Tipo"] = novo_tipo
+                                    st.session_state['frotas'][client_email][idx]["Capacidade_KG"] = int(nova_cap)
+                                    st.session_state['frotas'][client_email][idx]["Defeito"] = novo_defeito
+                                    st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = nova_data_inativ
+                                    st.success("Histórico mecânico salvo!")
+                                    st.rerun()
+                else:
+                    st.warning("Nenhum veículo cadastrado.")
 
-    # --- ABA 2: ROTEIRIZAR ENTREGAS (MANTIDO COMPLETO) ---
+        # --- SUB-ABA 2: GESTÃO DE CONDUTORES (NOVA FUNCIONALIDADE RH) ---
+        with sub_aba_condutores:
+            st.markdown("### 👥 Matriz de Recursos Humanos e Emissão de Acessos")
+            col_cad_cond, col_lista_cond = st.columns([1, 2])
+            
+            with col_cad_cond:
+                st.markdown("#### 👤 Registrar Novo Condutor")
+                frota_atual = st.session_state['frotas'].get(client_email, [])
+                lista_id_veiculos = [v["ID_Veiculo"] for v in frota_atual]
+                
+                with st.form("form_cadastro_condutor"):
+                    c_nome = st.text_input("Nome Completo do Condutor:")
+                    c_cpf = st.text_input("CPF:")
+                    c_rg = st.text_input("RG:")
+                    c_cnh = st.text_input("Número da CNH:")
+                    c_venc_cnh = st.date_input("Data de Vencimento da CNH:")
+                    c_end = st.text_area("Endereço Residencial:")
+                    
+                    st.markdown("---")
+                    st.markdown("**🔑 Credenciais de Login Operacional:**")
+                    c_email = st.text_input("E-mail de Login (Único):")
+                    c_senha = st.text_input("Senha de Acesso Tático:", type="password", value="789")
+                    
+                    st.markdown("---")
+                    st.markdown("**🚛 Vínculo de Ativos:**")
+                    c_veiculo = st.selectbox("Vincular a um Veículo de Teste:", ["-- Deixar Sem Vínculo --"] + lista_id_veiculos)
+                    
+                    if st.form_submit_button("Emitir Acesso e Salvar Condutor", use_container_width=True):
+                        email_cond_limpo = c_email.strip().lower()
+                        if not c_nome or not email_cond_limpo:
+                            st.error("Nome e E-mail são obrigatórios.")
+                        elif email_cond_limpo in st.session_state['usuarios'] and email_cond_limpo != "condutor01@farmaciax.com.br":
+                            st.error("Este e-mail de login já está em uso por outro operador.")
+                        else:
+                            venc_formatado = c_venc_cnh.strftime("%d/%m/%Y")
+                            v_vinculo = "-" if c_veiculo == "-- Deixar Sem Vínculo --" else c_veiculo
+                            
+                            # Salva na lista de condutores do cliente
+                            st.session_state['condutores'][client_email].append({
+                                "Nome": c_nome, "CPF": c_cpf, "RG": c_rg, "CNH": c_cnh, 
+                                "Venc_CNH": venc_formatado, "Endereço": c_end, "Email": email_cond_limpo, "Veiculo": v_vinculo
+                            })
+                            
+                            # injeta a conta no motor de autenticação global do AxiomQ
+                            st.session_state['usuarios'][email_cond_limpo] = {
+                                'senha': str(c_senha),
+                                'perfil': 'CONDUTOR',
+                                'empresa': c_dados['Empresa'],
+                                'veiculo': v_vinculo,
+                                'nome': c_nome
+                            }
+                            st.success(f"✅ Motorista {c_nome} integrado e credenciais liberadas!")
+                            st.rerun()
+            
+            with col_lista_cond:
+                st.markdown("#### 📋 Condutores Homologados")
+                lista_cond_atual = st.session_state['condutores'].get(client_email, [])
+                
+                if lista_cond_atual:
+                    df_cond_visu = pd.DataFrame(lista_cond_atual)
+                    st.dataframe(df_cond_visu, use_container_width=True)
+                    
+                    st.markdown("---")
+                    st.markdown("#### 🛠️ Central de Moderação de Cadastro")
+                    cond_selecionado = st.selectbox("Selecione o E-mail do Motorista:", [c["Email"] for c in lista_cond_atual])
+                    
+                    if cond_selecionado:
+                        idx_c = next(i for i, c in enumerate(lista_cond_atual) if c["Email"] == cond_selecionado)
+                        c_dados_sel = lista_cond_atual[idx_c]
+                        
+                        if st.button("❌ Remover Condutor do Sistema", use_container_width=True):
+                            del st.session_state['condutores'][client_email][idx_c]
+                            if cond_selecionado in st.session_state['usuarios']:
+                                del st.session_state['usuarios'][cond_selecionado]
+                            st.error("Operador removido da base de dados corporativa.")
+                            st.rerun()
+                            
+                        with st.expander("📝 Editar Cadastro / Alterar Vínculo de Carro"):
+                            with st.form("form_edit_cond"):
+                                ed_c_nome = st.text_input("Nome Completo:", value=c_dados_sel["Nome"])
+                                ed_c_cpf = st.text_input("CPF:", value=c_dados_sel["CPF"])
+                                ed_c_rg = st.text_input("RG:", value=c_dados_sel["RG"])
+                                ed_c_cnh = st.text_input("CNH:", value=c_dados_sel["CNH"])
+                                ed_c_venc = st.text_input("Vencimento CNH (dd/mm/aaaa):", value=c_dados_sel["Venc_CNH"])
+                                ed_c_end = st.text_area("Endereço:", value=c_dados_sel["Endereço"])
+                                ed_c_v = st.selectbox("Mudar Veículo Vinculado:", ["-"] + lista_id_veiculos, index=(lista_id_veiculos.index(c_dados_sel["Veiculo"]) + 1) if c_dados_sel["Veiculo"] in lista_id_veiculos else 0)
+                                
+                                if st.form_submit_button("Salvar Alterações Fiscais e Operacionais", use_container_width=True):
+                                    st.session_state['condutores'][client_email][idx_c].update({
+                                        "Nome": ed_c_nome, "CPF": ed_c_cpf, "RG": ed_c_rg, 
+                                        "CNH": ed_c_cnh, "Venc_CNH": ed_c_venc, "Endereço": ed_c_end, "Veiculo": ed_c_v
+                                    })
+                                    # Atualiza no motor de rotas
+                                    st.session_state['usuarios'][cond_selecionado]['veiculo'] = ed_c_v
+                                    st.session_state['usuarios'][cond_selecionado]['nome'] = ed_c_nome
+                                    st.success("Cadastro atualizado no satélite!")
+                                    st.rerun()
+                else:
+                    st.info("Nenhum motorista cadastrado para esta unidade.")
+
+    # --- ABA 2: ROTEIRIZAR ENTREGAS (MANTIDO COMPLETO E SEGURO) ---
     with aba_roteiro_cli:
         col_pedidos, col_mapa_painel = st.columns([1, 2])
         with col_pedidos:
@@ -309,7 +384,7 @@ elif user_info['perfil'] == 'CLIENTE':
                 st.success("✅ Planilha real carregada na memória com sucesso!")
             
             df_entregas = st.session_state['df_entregas_salvo']
-            veiculos_disponiveis = [v for v in st.session_state['frotas'].get(client_email, []) if v["Status"] == "Disponível"]
+            veiculos_disponiveis = [v for v in st.session_state['frotas'].get(client_email, []) if v["Status"] == "Disponpxvel" or v["Status"] == "Disponível"]
             
             if df_entregas is not None:
                 st.metric("Entregas Encontradas no Arquivo", len(df_entregas))
@@ -399,12 +474,14 @@ elif user_info['perfil'] == 'CONDUTOR':
         </style>
     """, unsafe_allow_html=True)
     st.title("📱 App do Condutor")
-    st.markdown(f"**Operador:** `{st.session_state['user_atual']}` | **Unidade:** `{user_info['veiculo']}`")
+    st.markdown(f"**Operador:** `{user_info.get('nome', st.session_state['user_atual'])}` | **Unidade Vinculada:** `{user_info['veiculo']}`")
     st.markdown("<div style='border-bottom: 2px solid #8b5cf6; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
     
     v_atual = user_info['veiculo']
-    if not st.session_state['motor_acionado'] or v_atual not in st.session_state['rotas_por_veiculo_global']:
-        st.warning("⏳ Nenhuma rota ativa para este veículo.")
+    if v_atual == "-":
+        st.warning("⚠️ Você não possui nenhum veículo vinculado ao seu perfil administrativo hoje. Solicite o vínculo ao seu gestor logístico.")
+    elif not st.session_state['motor_acionado'] or v_atual not in st.session_state['rotas_por_veiculo_global']:
+        st.warning("⏳ Nenhuma rota ativa para o seu veículo neste momento. Aguardando processamento do painel central pelo gestor.")
     else:
         df_rotas_motorista = st.session_state['rotas_por_veiculo_global'][v_atual]
         st.subheader(f"📋 Suas Entregas ({len(df_rotas_motorista)} Paradas)")
