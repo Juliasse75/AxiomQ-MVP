@@ -34,12 +34,14 @@ if 'planos' not in st.session_state:
         "Quantum (Enterprise) - Ilimitado": "Ilimitado"
     }
 
+LISTA_MODAIS = ["Carro Leve", "Picape 4x4", "Van", "Caminhão Pesado", "Motocicleta"]
+
 if 'frotas' not in st.session_state:
     st.session_state['frotas'] = {
         'gerente@farmaciax.com.br': [
-            {"ID_Veiculo": "Moto-01", "Tipo": "Motocicleta", "Capacidade_KG": 100, "Status": "Disponível"},
-            {"ID_Veiculo": "Moto-02", "Tipo": "Motocicleta", "Capacidade_KG": 100, "Status": "Disponível"},
-            {"ID_Veiculo": "Moto-03", "Tipo": "Motocicleta", "Capacidade_KG": 100, "Status": "Disponível"}
+            {"ID_Veiculo": "Moto-01", "Tipo": "Motocicleta", "Capacidade_KG": 100, "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"},
+            {"ID_Veiculo": "Moto-02", "Tipo": "Motocicleta", "Capacidade_KG": 100, "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"},
+            {"ID_Veiculo": "Moto-03", "Tipo": "Motocicleta", "Capacidade_KG": 100, "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"}
         ]
     }
 
@@ -51,8 +53,6 @@ if 'rotas_por_veiculo_global' not in st.session_state: st.session_state['rotas_p
 if 'logado' not in st.session_state: st.session_state['logado'] = False
 if 'user_atual' not in st.session_state: st.session_state['user_atual'] = None
 
-LISTA_MODAIS = ["Carro Leve", "Picape 4x4", "Van", "Caminhão Pesado", "Motocicleta"]
-
 LOGO_HTML = """
 <div style="text-align: center; margin-bottom: 20px;">
     <h1 style="font-size: 50px; font-weight: 800; color: white; margin: 0; text-shadow: 0 0 15px #2563eb, 0 0 30px #8b5cf6;">Axiom<span style="color: #2563eb;">Q</span></h1>
@@ -61,7 +61,7 @@ LOGO_HTML = """
 """
 
 # ==========================================
-# TELA DE AUTENTICAÇÃO
+# TELA DE AUTENTICAÇÃO CENTRAL
 # ==========================================
 if not st.session_state['logado']:
     col1, col2, col3 = st.columns([1, 1.5, 1])
@@ -91,7 +91,7 @@ if st.sidebar.button("🔒 Encerrar Sessão", use_container_width=True):
     st.rerun()
 
 # ==========================================
-# AMBIENTE MASTER: ADMINISTRADOR (RESTAURADO COMPLETO)
+# AMBIENTE MASTER: ADMINISTRADOR (COMPLETO)
 # ==========================================
 if user_info['perfil'] == 'MASTER':
     st.title(f"👋 Bem-vindo, {user_info['nome']} | Controle Matriz")
@@ -123,8 +123,6 @@ if user_info['perfil'] == 'MASTER':
                     st.session_state['frotas'][email_limpo_cad] = []
                     st.success(f"✅ Parceiro {nome} registrado com sucesso!")
                     st.rerun()
-                else:
-                    st.warning("E-mail já existe.")
 
     with aba_parceiros:
         st.subheader("Base de Clientes Ativos")
@@ -151,12 +149,40 @@ if user_info['perfil'] == 'MASTER':
                     if cliente_sel in st.session_state['frotas']: del st.session_state['frotas'][cliente_sel]
                     st.rerun()
                     
+    # --- NOVO: ABA DE PLANOS EXPANDIDA (ADICIONAR E EDITAR SELECIONANDO) ---
     with aba_planos:
-        st.subheader("Editor Dinâmico de Planos")
-        for p, d in st.session_state['planos'].items(): st.write(f"- **{p}**: {d}")
+        st.subheader("⚙️ Editor e Criador Dinâmico de Planos AxiomQ")
+        st.markdown("Escolha um plano para atualizar ou selecione a opção de criar um novo nível de licença.")
+        
+        lista_planos_existentes = list(st.session_state['planos'].keys())
+        plano_selecionado_ed = st.selectbox("Ação de Planos:", ["-- Criar Novo Plano --"] + lista_planos_existentes)
+        
+        with st.form("form_planos_dinamico"):
+            if plano_selecionado_ed == "-- Criar Novo Plano --":
+                nome_plano_input = st.text_input("Nome do Novo Plano (Ex: Plano Platinum):")
+                desc_plano_input = st.text_input("Descrição / Restrição de Frota (Ex: Até 100 veículos):")
+            else:
+                nome_plano_input = st.text_input("Plano Selecionado (Nome Fixo):", value=plano_selecionado_ed, disabled=True)
+                desc_plano_input = st.text_input("Modificar Descrição / Restrição de Frota:", value=st.session_state['planos'][plano_selecionado_ed])
+                
+            if st.form_submit_button("💾 Gravar Configuração do Plano", use_container_width=True):
+                if desc_plano_input:
+                    if plano_selecionado_ed == "-- Criar Novo Plano --" and nome_plano_input:
+                        st.session_state['planos'][nome_plano_input] = desc_plano_input
+                        st.success(f"✅ Novo plano '{nome_plano_input}' integrado com sucesso!")
+                    else:
+                        st.session_state['planos'][plano_selecionado_ed] = desc_plano_input
+                        st.success(f"✅ Licença '{plano_selecionado_ed}' atualizada na Matriz!")
+                    time.sleep(0.5)
+                    st.rerun()
+        
+        st.markdown("---")
+        st.markdown("**Grade Atual de Planos Disponíveis:**")
+        for p, d in st.session_state['planos'].items():
+            st.write(f"⚡ **{p}**: {d}")
 
 # ==========================================
-# AMBIENTE CLIENTE: PORTAL DO GESTOR DE LOGÍSTICA
+# AMBIENTE CLIENTE: PORTAL DO GESTOR DA FARMÁCIA
 # ==========================================
 elif user_info['perfil'] == 'CLIENTE':
     client_email = st.session_state['user_atual']
@@ -166,9 +192,9 @@ elif user_info['perfil'] == 'CLIENTE':
     st.markdown(f"**Licença Ativa:** `{c_dados['Plano']}` | **Status:** `CONEXÃO OPERACIONAL ATIVA`")
     st.markdown("---")
     
-    aba_frota_cli, aba_roteiro_cli = st.tabs(["🚛 1. Gerenciar Frota Ativa", "📦 2. Roteirizar Entregas"])
+    aba_frota_cli, aba_roteiro_cli = st.tabs(["# 🚛 1. Gerenciar Frota Ativa", "📦 2. Roteirizar Entregas"])
     
-    # --- ABA 1: GESTÃO DE FROTA (RESTAURADA E COMPLETA) ---
+    # --- ABA 1: GESTÃO DE FROTA (RESTAURADA E EXPANDIDA) ---
     with aba_frota_cli:
         st.subheader("Controle de Ativos e Disponibilidade de Veículos")
         col_up_frota, col_lista_frota = st.columns([1, 2])
@@ -183,14 +209,17 @@ elif user_info['perfil'] == 'CLIENTE':
                     for _, r in df_f_uploaded.iterrows():
                         tipo_planilha = str(r.get('Tipo', 'Carro Leve'))
                         if tipo_planilha not in LISTA_MODAIS: tipo_planilha = "Carro Leve"
+                        # Inicializa com colunas mecânicas padrão
                         nova_frota.append({
                             "ID_Veiculo": str(r.get('ID_Veiculo', f"VEIC-{_}")),
                             "Tipo": tipo_planilha,
                             "Capacidade_KG": int(r.get('Capacidade_KG', 500)),
-                            "Status": "Disponível"
+                            "Status": "Disponível",
+                            "Defeito": "-",
+                            "Data_Inatividade": "-"
                         })
                     st.session_state['frotas'][client_email] = nova_frota
-                    st.success(f"✅ Frota integrada com sucesso!")
+                    st.success(f"✅ Frota de campo integrada com sucesso!")
                     time.sleep(1)
                     st.rerun()
             
@@ -202,7 +231,10 @@ elif user_info['perfil'] == 'CLIENTE':
                 cap_v = st.number_input("Capacidade de Carga (KG):", min_value=1, value=500)
                 if st.form_submit_button("Adicionar à Frota Ativa", use_container_width=True):
                     if id_v:
-                        st.session_state['frotas'][client_email].append({"ID_Veiculo": id_v, "Tipo": tipo_v, "Capacidade_KG": int(cap_v), "Status": "Disponível"})
+                        st.session_state['frotas'][client_email].append({
+                            "ID_Veiculo": id_v, "Tipo": tipo_v, "Capacidade_KG": int(cap_v), 
+                            "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"
+                        })
                         st.success(f"Veículo {id_v} incluído!")
                         time.sleep(0.5)
                         st.rerun()
@@ -215,15 +247,8 @@ elif user_info['perfil'] == 'CLIENTE':
                 df_frota_visu = pd.DataFrame(frota_atual)
                 st.dataframe(df_frota_visu, use_container_width=True)
                 
-                # Exportação corrigida para formato brasileiro (; e utf-8)
                 csv_data = df_frota_visu.to_csv(index=False, sep=';', encoding='utf-8-sig')
-                st.download_button(
-                    label="📥 Exportar Frota Atual (Padrão Excel BR)",
-                    data=csv_data,
-                    file_name="frota_axiomq.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
+                st.download_button(label="📥 Exportar Frota Atual (Excel BR)", data=csv_data, file_name="frota_axiomq.csv", mime="text/csv", use_container_width=True)
                 
                 st.markdown("---")
                 st.markdown("### 🛠️ Modificar Veículo Individual")
@@ -239,34 +264,46 @@ elif user_info['perfil'] == 'CLIENTE':
                     
                     if col_edit1.button(lbl_status, use_container_width=True):
                         st.session_state['frotas'][client_email][idx]["Status"] = n_stat
+                        # Carimba automaticamente a data e defeito padrão se for para indisponível
+                        if n_stat == "Indisponível":
+                            st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = time.strftime("%d/%m/%Y")
+                            st.session_state['frotas'][client_email][idx]["Defeito"] = "Aguardando diagnóstico detalhado"
+                        else:
+                            st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = "-"
+                            st.session_state['frotas'][client_email][idx]["Defeito"] = "-"
                         st.rerun()
                         
                     if col_edit2.button("🗑️ Remover da Frota", use_container_width=True):
                         st.session_state['frotas'][client_email].pop(idx)
                         st.rerun()
-                        
-                    with st.expander("📝 Editar Detalhes Mecânicos"):
+                    
+                    # --- NOVO: FORMULÁRIO DE DETALHES MECÂNICOS COM OBS DE DEFEITO E DATA DE ENTRADA ---
+                    with st.expander("📝 Editar Detalhes Mecânicos Avançados"):
                         with st.form("edit_mec"):
                             novo_tipo = st.selectbox("Alterar Tipo:", LISTA_MODAIS, index=LISTA_MODAIS.index(v_dados["Tipo"]) if v_dados["Tipo"] in LISTA_MODAIS else 0)
                             nova_cap = st.number_input("Nova Capacidade (KG):", value=v_dados["Capacidade_KG"])
+                            
+                            st.markdown("**Registro de Ocorrências e Inatividade:**")
+                            novo_defeito = st.text_area("Observação / Defeito do Veículo:", value=v_dados.get("Defeito", "-"))
+                            nova_data_inativ = st.text_input("Data de Entrada no Status Indisponível (dd/mm/aaaa):", value=v_dados.get("Data_Inatividade", "-"))
+                            
                             if st.form_submit_button("Salvar Alterações Mecânicas", use_container_width=True):
                                 st.session_state['frotas'][client_email][idx]["Tipo"] = novo_tipo
                                 st.session_state['frotas'][client_email][idx]["Capacidade_KG"] = int(nova_cap)
-                                st.success("Atualizado!")
+                                st.session_state['frotas'][client_email][idx]["Defeito"] = novo_defeito
+                                st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = nova_data_inativ
+                                st.success("✅ Histórico mecânico gravado com sucesso na frota ativa!")
                                 time.sleep(0.5)
                                 st.rerun()
             else:
-                st.warning("Nenhum veículo cadastrado. Suba uma planilha ou insira um veículo avulso ao lado.")
+                st.warning("Nenhum veículo cadastrado.")
 
-    # --- ABA 2: ROTEIRIZAR ENTREGAS (MANTENDO O FILTRO DO MAPA E MEMÓRIA DE ENDEREÇOS) ---
+    # --- ABA 2: ROTEIRIZAR ENTREGAS (MANTIDO COMPLETO) ---
     with aba_roteiro_cli:
-        st.subheader("Injeção Diária de Pedidos e Roteamento Híbrido")
         col_pedidos, col_mapa_painel = st.columns([1, 2])
-        
         with col_pedidos:
             st.markdown("### 📦 Entregas do Dia")
             arq_e = st.file_uploader("Carregar Pontos de Entrega (CSV)", type="csv", key="entregas_uploader")
-            
             if arq_e:
                 st.session_state['df_entregas_salvo'] = pd.read_csv(arq_e)
                 st.success("✅ Planilha real carregada na memória com sucesso!")
@@ -277,7 +314,6 @@ elif user_info['perfil'] == 'CLIENTE':
             if df_entregas is not None:
                 st.metric("Entregas Encontradas no Arquivo", len(df_entregas))
                 st.metric("Veículos Ativos Prontos", len(veiculos_disponiveis))
-                
                 if st.button("🚀 Disparar Motor Quântico AxiomQ", use_container_width=True):
                     st.session_state['motor_acionado'] = True
             else:
@@ -286,53 +322,38 @@ elif user_info['perfil'] == 'CLIENTE':
         with col_mapa_painel:
             if df_entregas is not None and st.session_state['motor_acionado'] and len(veiculos_disponiveis) > 0:
                 try:
-                    lat_media = df_entregas['Latitude'].mean()
-                    lon_media = df_entregas['Longitude'].mean()
+                    lat_media, lon_media = df_entregas['Latitude'].mean(), df_entregas['Longitude'].mean()
                     
                     st.markdown("### 👁️ Filtro de Isolamento de Frota")
                     opcoes_filtro = ["Mostrar Todos os Veículos"] + [v["ID_Veiculo"] for v in veiculos_disponiveis]
-                    veiculos_selecionados = st.multiselect(
-                        "Selecione quais veículos deseja visualizar no mapa simultaneamente:",
-                        options=opcoes_filtro,
-                        default=["Mostrar Todos os Veículos"]
-                    )
+                    veiculos_selecionados = st.multiselect("Visualização de Frota:", options=opcoes_filtro, default=["Mostrar Todos os Veículos"])
                     
                     mapa_cliente = folium.Map(location=[lat_media, lon_media], zoom_start=13, tiles="CartoDB dark_matter")
                     folium.Marker([lat_media, lon_media], popup="<b>HUB Central</b>", icon=folium.Icon(color="red", icon="home")).add_to(mapa_cliente)
                     
                     cores_hex = ["#3b82f6", "#a855f7", "#eab308", "#22c55e", "#ec4899", "#f97316", "#14b8a6", "#ef4444"]
                     qtd_v = len(veiculos_disponiveis)
-                    
                     df_ordenado = df_entregas.sort_values(by=['Latitude', 'Longitude']).reset_index(drop=True)
                     lista_resumo_kpis = []
-                    
                     st.session_state['rotas_por_veiculo_global'] = {}
                     
                     for idx_v, v in enumerate(veiculos_disponiveis):
                         pontos_v = df_ordenado[df_ordenado.index % qtd_v == idx_v].reset_index(drop=True)
                         cor_v = cores_hex[idx_v % len(cores_hex)]
-                        
                         st.session_state['rotas_por_veiculo_global'][v["ID_Veiculo"]] = pontos_v
                         
                         deve_exibir = "Mostrar Todos os Veículos" in veiculos_selecionados or v["ID_Veiculo"] in veiculos_selecionados
-                        
                         coordenadas_linha = [[lat_media, lon_media]]
                         total_entregas = len(pontos_v)
                         realizadas = 0
                         
                         for idx_p, row in pontos_v.iterrows():
                             chave_status = f"{v['ID_Veiculo']}_{idx_p}"
-                            if chave_status not in st.session_state['registro_entregas']:
-                                st.session_state['registro_entregas'][chave_status] = "⏳ Em Rota"
-                                
-                            if st.session_state['registro_entregas'][chave_status] == "✅ Pacote Entregue":
-                                realizadas += 1
-                                
+                            if chave_status not in st.session_state['registro_entregas']: st.session_state['registro_entregas'][chave_status] = "⏳ Em Rota"
+                            if st.session_state['registro_entregas'][chave_status] == "✅ Pacote Entregue": realizadas += 1
+                            
                             if deve_exibir:
-                                folium.CircleMarker(
-                                    location=[row['Latitude'], row['Longitude']], radius=5, color=cor_v, fill=True, fill_color=cor_v, fill_opacity=0.8,
-                                    popup=f"Parada {idx_p+1}: {row.get('Nome', 'Cliente')}"
-                                ).add_to(mapa_cliente)
+                                folium.CircleMarker(location=[row['Latitude'], row['Longitude']], radius=5, color=cor_v, fill=True, popup=f"Parada {idx_p+1}: {row.get('Nome', 'Cliente')}").add_to(mapa_cliente)
                             coordenadas_linha.append([row['Latitude'], row['Longitude']])
                         
                         if len(pontos_v) > 0 and deve_exibir:
@@ -345,22 +366,19 @@ elif user_info['perfil'] == 'CLIENTE':
                         })
                         
                     components.html(mapa_cliente._repr_html_(), height=420)
-                    
                     st.markdown("### 📊 Quadro de Eficiência Operacional (KPIs)")
                     st.table(pd.DataFrame(lista_resumo_kpis))
                     
                     st.markdown("---")
                     st.markdown("### 📋 Auditoria de Manifesto Nominativo Real")
                     v_sel = st.selectbox("Selecione o veículo para auditar o romaneio:", list(st.session_state['rotas_por_veiculo_global'].keys()))
-                    
                     if v_sel and v_sel in st.session_state['rotas_por_veiculo_global']:
                         df_paradas = st.session_state['rotas_por_veiculo_global'][v_sel]
                         tabela_gerente = []
                         for idx_p, row in df_paradas.iterrows():
                             chave = f"{v_sel}_{idx_p}"
                             tabela_gerente.append({
-                                "Parada": f"{idx_p+1}º",
-                                "Cliente/Recebedor": row.get('Nome', f"Cliente #{idx_p+1}"),
+                                "Parada": f"{idx_p+1}º", "Cliente/Recebedor": row.get('Nome', f"Cliente #{idx_p+1}"),
                                 "Endereço Completo": f"{row.get('Endereço',' Rua')} - {row.get('Bairro','Bairro')}, {row.get('Cidade','Cidade')}",
                                 "Status de Campo": st.session_state['registro_entregas'].get(chave, "⏳ Em Rota")
                             })
@@ -380,29 +398,24 @@ elif user_info['perfil'] == 'CONDUTOR':
             .stButton>button { background-color: #22c55e !important; color: white !important; font-weight: bold; }
         </style>
     """, unsafe_allow_html=True)
-    
     st.title("📱 App do Condutor")
     st.markdown(f"**Operador:** `{st.session_state['user_atual']}` | **Unidade:** `{user_info['veiculo']}`")
     st.markdown("<div style='border-bottom: 2px solid #8b5cf6; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
     
     v_atual = user_info['veiculo']
-    
     if not st.session_state['motor_acionado'] or v_atual not in st.session_state['rotas_por_veiculo_global']:
-        st.warning("⏳ Nenhuma rota ativa para este veículo. Aguardando processamento do painel central pelo gestor.")
+        st.warning("⏳ Nenhuma rota ativa para este veículo.")
     else:
         df_rotas_motorista = st.session_state['rotas_por_veiculo_global'][v_atual]
         st.subheader(f"📋 Suas Entregas ({len(df_rotas_motorista)} Paradas)")
-        
         for i, row in df_rotas_motorista.iterrows():
             chave_entrega = f"{v_atual}_{i}"
             status_atual = st.session_state['registro_entregas'].get(chave_entrega, "⏳ Em Rota")
-            
             with st.container():
                 st.markdown(f"### **{i+1}ª Parada**")
                 st.markdown(f"👤 **Cliente:** {row.get('Nome', 'Não Informado')}")
                 st.markdown(f"📍 {row.get('Endereço', '')} - {row.get('Bairro', '')}, {row.get('Cidade', '')}")
                 st.markdown(f"Status Atual: `{status_atual}`")
-                
                 if status_atual == "⏳ Em Rota":
                     if st.button(f"✓ Confirmar Entrega #{i+1}", key=f"btn_{chave_entrega}", use_container_width=True):
                         st.session_state['registro_entregas'][chave_entrega] = "✅ Pacote Entregue"
