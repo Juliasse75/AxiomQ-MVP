@@ -60,7 +60,7 @@ if 'user_atual' not in st.session_state: st.session_state['user_atual'] = None
 
 LISTA_MODAIS = ["Carro Leve", "Picape 4x4", "Van", "Caminhão Pesado", "Motocicleta"]
 
-# DADOS FIXOS DO TEXTO DE 25 PONTOS PARA GARANTIR INTEGRIDADE GLOBAL INDEPENDENTE DA SESSÃO
+# BASE DE DADOS INTEGRADA PARA REALISMO DE TESTE MOBILE
 DADOS_BH_MOCK = [
     {"Nome": "Carlos Silva", "Endereço": "Av. Afonso Pena 1500", "Bairro": "Centro", "Cidade": "Belo Horizonte", "Latitude": -19.9245, "Longitude": -43.9352},
     {"Nome": "Maria Oliveira", "Endereço": "Rua Bahia 1000", "Bairro": "Lourdes", "Cidade": "Belo Horizonte", "Latitude": -19.9280, "Longitude": -43.9385},
@@ -89,14 +89,6 @@ DADOS_BH_MOCK = [
     {"Nome": "Livraria Leitura", "Endereço": "Av. Cristóvão Colombo 500", "Bairro": "Savassi", "Cidade": "Belo Horizonte", "Latitude": -19.9395, "Longitude": -43.9370}
 ]
 
-# DETECTA E INICIALIZA AUTOMATICAMENTE AS ROTAS EM NOVAS SESSÕES DE CELULAR PARA OS CONDUTORES
-if user_info and user_info.get('perfil') == 'CONDUTOR' and not st.session_state['motor_acionado']:
-    st.session_state['motor_acionado'] = True
-    df_m = pd.DataFrame(DADOS_BH_MOCK)
-    st.session_state['rotas_por_veiculo_global']["Moto-01"] = df_m[df_m.index % 3 == 0].reset_index(drop=True)
-    st.session_state['rotas_por_veiculo_global']["Moto-02"] = df_m[df_m.index % 3 == 1].reset_index(drop=True)
-    st.session_state['rotas_por_veiculo_global']["Moto-03"] = df_m[df_m.index % 3 == 2].reset_index(drop=True)
-
 LOGO_HTML = """
 <div style="text-align: center; margin-bottom: 20px;">
     <h1 style="font-size: 50px; font-weight: 800; color: white; margin: 0; text-shadow: 0 0 15px #2563eb, 0 0 30px #8b5cf6;">Axiom<span style="color: #2563eb;">Q</span></h1>
@@ -104,7 +96,9 @@ LOGO_HTML = """
 </div>
 """
 
+# ==========================================
 # TELA DE AUTENTICAÇÃO CENTRAL
+# ==========================================
 if not st.session_state['logado']:
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
@@ -125,7 +119,17 @@ if not st.session_state['logado']:
                     st.error("Credenciais inválidas.")
     st.stop()
 
+# CRIAÇÃO SEGURA DAS VARIÁVEIS PÓS-LOGIN (PREVINE O NAMEERROR)
 user_info = st.session_state['usuarios'][st.session_state['user_atual']]
+
+# ATIVAÇÃO DA MALHA DE TESTE AUTOMÁTICA PARA SESSÕES MÓVEIS SEPARADAS
+if user_info.get('perfil') == 'CONDUTOR' and not st.session_state['motor_acionado']:
+    st.session_state['motor_acionado'] = True
+    df_m = pd.DataFrame(DADOS_BH_MOCK)
+    st.session_state['rotas_por_veiculo_global']["Moto-01"] = df_m[df_m.index % 3 == 0].reset_index(drop=True)
+    st.session_state['rotas_por_veiculo_global']["Moto-02"] = df_m[df_m.index % 3 == 1].reset_index(drop=True)
+    st.session_state['rotas_por_veiculo_global']["Moto-03"] = df_m[df_m.index % 3 == 2].reset_index(drop=True)
+
 st.sidebar.markdown("### Controle de Sessão")
 if st.sidebar.button("🔒 Encerrar Sessão", use_container_width=True):
     st.session_state['logado'] = False
@@ -243,7 +247,7 @@ elif user_info['perfil'] == 'CLIENTE':
                                 "Capacidade_KG": int(r.get('Capacidade_KG', 500)), "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"
                             })
                         st.session_state['frotas'][client_email] = nova_frota
-                        st.success(f"✅ Frota integrada com sucesso!")
+                        st.success(f"✅ Frota integrada!")
                         st.rerun()
                 
                 st.markdown("---")
@@ -259,7 +263,7 @@ elif user_info['perfil'] == 'CLIENTE':
                             st.rerun()
             
             with col_lista_frota:
-                st.markdown("### 📋 Frota Registrada no Sistema")
+                st.markdown("### 📋 Frota Registrada")
                 frota_atual = st.session_state['frotas'].get(client_email, [])
                 if frota_atual:
                     df_frota_visu = pd.DataFrame(frota_atual)
@@ -282,7 +286,7 @@ elif user_info['perfil'] == 'CLIENTE':
                             st.session_state['frotas'][client_email][idx]["Status"] = n_stat
                             if n_stat == "Indisponível":
                                 st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = time.strftime("%d/%m/%Y")
-                                st.session_state['frotas'][client_email][idx]["Defeito"] = "Aguardando diagnóstico detalhado"
+                                st.session_state['frotas'][client_email][idx]["Defeito"] = "Aguardando diagnóstico"
                             else:
                                 st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = "-"
                                 st.session_state['frotas'][client_email][idx]["Defeito"] = "-"
@@ -303,13 +307,13 @@ elif user_info['perfil'] == 'CLIENTE':
                                     st.session_state['frotas'][client_email][idx]["Capacidade_KG"] = int(nova_cap)
                                     st.session_state['frotas'][client_email][idx]["Defeito"] = novo_defeito
                                     st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = nova_data_inativ
-                                    st.success("Histórico mecânico salvo!")
+                                    st.success("Histórico salvo!")
                                     st.rerun()
                 else:
                     st.warning("Nenhum veículo cadastrado.")
 
         with sub_aba_condutores:
-            st.markdown("### 👥 Matriz de Recursos Humanos e Emissão de Acessos")
+            st.markdown("### 👥 Matriz de Recursos Humanos")
             col_cad_cond, col_lista_cond = st.columns([1, 2])
             
             with col_cad_cond:
@@ -318,20 +322,20 @@ elif user_info['perfil'] == 'CLIENTE':
                 lista_id_veiculos = [v["ID_Veiculo"] for v in frota_atual]
                 
                 with st.form("form_cadastro_condutor"):
-                    c_nome = st.text_input("Nome Completo do Condutor:")
+                    c_nome = st.text_input("Nome Completo:")
                     c_cpf = st.text_input("CPF:")
                     c_rg = st.text_input("RG:")
-                    c_cnh = st.text_input("Número da CNH:")
-                    c_venc_cnh = st.date_input("Data de Vencimento da CNH:")
+                    c_cnh = st.text_input("CNH:")
+                    c_venc_cnh = st.date_input("Vencimento CNH:")
                     c_end = st.text_area("Endereço Residencial:")
-                    c_email = st.text_input("E-mail de Login (Único):")
+                    c_email = st.text_input("E-mail de Login:")
                     c_senha = st.text_input("Senha de Acesso Tático:", type="password", value="789")
-                    c_veiculo = st.selectbox("Vincular a um Veículo de Teste:", ["-- Deixar Sem Vínculo --"] + lista_id_veiculos)
+                    c_veiculo = st.selectbox("Vincular a um Veículo:", ["-- Deixar Sem Vínculo --"] + lista_id_veiculos)
                     
                     if st.form_submit_button("Emitir Acesso e Salvar Condutor", use_container_width=True):
                         email_cond_limpo = c_email.strip().lower()
                         if not c_nome or not email_cond_limpo:
-                            st.error("Nome e E-mail são obrigatórios.")
+                            st.error("Campos essenciais vazios.")
                         else:
                             venc_formatado = c_venc_cnh.strftime("%d/%m/%Y")
                             v_vinculo = "-" if c_veiculo == "-- Deixar Sem Vínculo --" else c_veiculo
@@ -361,7 +365,7 @@ elif user_info['perfil'] == 'CLIENTE':
                         idx_c = next(i for i, c in enumerate(lista_cond_atual) if c["Email"] == cond_selecionado)
                         c_dados_sel = lista_cond_atual[idx_c]
                         
-                        if st.button("❌ Remover Condutor do Sistema", use_container_width=True):
+                        if st.button("❌ Remover Condutor", use_container_width=True):
                             del st.session_state['condutores'][client_email][idx_c]
                             if cond_selecionado in st.session_state['usuarios']: del st.session_state['usuarios'][cond_selecionado]
                             st.rerun()
@@ -374,7 +378,7 @@ elif user_info['perfil'] == 'CLIENTE':
                                 ed_c_cnh = st.text_input("CNH:", value=c_dados_sel["CNH"])
                                 ed_c_venc = st.text_input("Vencimento CNH:", value=c_dados_sel["Venc_CNH"])
                                 ed_c_end = st.text_area("Endereço:", value=c_dados_sel["Endereço"])
-                                ed_c_v = st.selectbox("Mudar Veículo Vinculado:", ["-"] + lista_id_veiculos, index=(lista_id_veiculos.index(c_dados_sel["Veiculo"]) + 1) if c_dados_sel["Veiculo"] in lista_id_veiculos else 0)
+                                ed_c_v = st.selectbox("Mudar Veículo:", ["-"] + lista_id_veiculos, index=(lista_id_veiculos.index(c_dados_sel["Veiculo"]) + 1) if c_dados_sel["Veiculo"] in lista_id_veiculos else 0)
                                 if st.form_submit_button("Salvar Alterações", use_container_width=True):
                                     st.session_state['condutores'][client_email][idx_c].update({
                                         "Nome": ed_c_nome, "CPF": ed_c_cpf, "RG": ed_c_rg, "CNH": ed_c_cnh, "Venc_CNH": ed_c_venc, "Endereço": ed_c_end, "Veiculo": ed_c_v
@@ -397,7 +401,7 @@ elif user_info['perfil'] == 'CLIENTE':
             veiculos_disponiveis = [v for v in st.session_state['frotas'].get(client_email, []) if v["Status"] == "Disponível"]
             
             if df_entregas is not None:
-                st.metric("Entregas Encontradas no Arquivo", len(df_entregas))
+                st.metric("Entregas no Arquivo", len(df_entregas))
                 st.metric("Veículos Ativos Prontos", len(veiculos_disponiveis))
                 if st.button("🚀 Disparar Motor Quântico AxiomQ", use_container_width=True):
                     st.session_state['motor_acionado'] = True
@@ -425,106 +429,4 @@ elif user_info['perfil'] == 'CLIENTE':
                     for idx_v, v in enumerate(veiculos_disponiveis):
                         pontos_v = df_ordenado[df_ordenado.index % qtd_v == idx_v].reset_index(drop=True)
                         cor_v = cores_hex[idx_v % len(cores_hex)]
-                        st.session_state['rotas_por_veiculo_global'][v["ID_Veiculo"]] = pontos_v
-                        
-                        deve_exibir = "Mostrar Todos os Veículos" in veiculos_selecionados or v["ID_Veiculo"] in veiculos_selecionados
-                        coordenadas_linha = [[lat_media, lon_media]]
-                        total_entregas = len(pontos_v)
-                        realizadas = 0
-                        
-                        for idx_p, row in pontos_v.iterrows():
-                            chave_status = f"{v['ID_Veiculo']}_{idx_p}"
-                            if chave_status not in st.session_state['registro_entregas']: st.session_state['registro_entregas'][chave_status] = "⏳ Em Rota"
-                            if st.session_state['registro_entregas'][chave_status] == "✅ Pacote Entregue": realizadas += 1
-                            
-                            if deve_exibir:
-                                folium.CircleMarker(location=[row['Latitude'], row['Longitude']], radius=5, color=cor_v, fill=True, popup=f"Parada {idx_p+1}: {row.get('Nome', 'Cliente')}").add_to(mapa_cliente)
-                            coordenadas_linha.append([row['Latitude'], row['Longitude']])
-                        
-                        if len(pontos_v) > 0 and deve_exibir:
-                            folium.PolyLine(coordenadas_linha, color=cor_v, weight=2.5, opacity=0.7).add_to(mapa_cliente)
-                            
-                        pct_realizado = round((realizadas / total_entregas) * 100, 1) if total_entregas > 0 else 0.0
-                        lista_resumo_kpis.append({
-                            "ID do Veículo": v["ID_Veiculo"], "Tipo": v["Tipo"], "Carga Alocada": f"{total_entregas} Pacotes",
-                            "Progresso de Campo": f"🟢 {realizadas} de {total_entregas} Concluídas", "Taxa de Sucesso": f"{pct_realizado} %"
-                        })
-                        
-                    components.html(mapa_cliente._repr_html_(), height=420)
-                    st.markdown("### 📊 Quadro de Eficiência Operacional (KPIs)")
-                    st.table(pd.DataFrame(lista_resumo_kpis))
-                    
-                    # --- MELHORIA PEDIDA: EXIBIÇÃO DO NOME DO CONDUTOR JUNTO AO VEÍCULO NA AUDITORIA DO MANIFESTO ---
-                    st.markdown("---")
-                    st.markdown("### 📋 Auditoria de Manifesto Nominativo Real")
-                    
-                    # Função interna de formatação tática para a caixa de seleção
-                    def formatar_caixa_manifesto(v_id):
-                        m_nome = "Sem condutor vinculado"
-                        for cond in st.session_state['condutores'].get(client_email, []):
-                            if cond["Veiculo"] == v_id:
-                                m_nome = cond["Nome"]
-                                break
-                        return f"🚛 {v_id} — (Condutor: {m_nome})"
-                    
-                    v_sel = st.selectbox(
-                        "Selecione o veículo para auditar o romaneio:", 
-                        list(st.session_state['rotas_por_veiculo_global'].keys()),
-                        format_func=formatar_caixa_manifesto
-                    )
-                    
-                    if v_sel and v_sel in st.session_state['rotas_por_veiculo_global']:
-                        df_paradas = st.session_state['rotas_por_veiculo_global'][v_sel]
-                        tabela_gerente = []
-                        for idx_p, row in df_paradas.iterrows():
-                            chave = f"{v_sel}_{idx_p}"
-                            tabela_gerente.append({
-                                "Parada": f"{idx_p+1}º", "Cliente/Recebedor": row.get('Nome', f"Cliente #{idx_p+1}"),
-                                "Endereço Completo": f"{row.get('Endereço',' Rua')} - {row.get('Bairro','Bairro')}, {row.get('Cidade','Cidade')}",
-                                "Status de Campo": st.session_state['registro_entregas'].get(chave, "⏳ Em Rota")
-                            })
-                        st.dataframe(pd.DataFrame(tabela_gerente), use_container_width=True)
-                except Exception as e:
-                    st.error(f"Erro no mapa: {e}")
-            else:
-                st.info("Aguardando acionamento do motor tático.")
-
-# ==========================================
-# INTERFACE MOBILE: APP DO CONDUTOR
-# ==========================================
-elif user_info['perfil'] == 'CONDUTOR':
-    st.markdown("""
-        <style>
-            .block-container { max-width: 450px !important; padding-top: 1rem !important; }
-            .stButton>button { background-color: #22c55e !important; color: white !important; font-weight: bold; }
-        </style>
-    """, unsafe_allow_html=True)
-    st.title("📱 App do Condutor")
-    st.markdown(f"**Operador:** `{user_info.get('nome', st.session_state['user_atual'])}` | **Unidade Vinculada:** `{user_info['veiculo']}`")
-    st.markdown("<div style='border-bottom: 2px solid #8b5cf6; margin-bottom: 15px;'></div>", unsafe_allow_html=True)
-    
-    v_atual = user_info['veiculo']
-    if v_atual == "-":
-        st.warning("⚠️ Você não possui nenhum veículo vinculado ao seu perfil hoje.")
-    elif v_atual not in st.session_state['rotas_por_veiculo_global']:
-        st.warning("⏳ Nenhuma rota ativa encontrada.")
-    else:
-        df_rotas_motorista = st.session_state['rotas_por_veiculo_global'][v_atual]
-        st.subheader(f"📋 Suas Entregas ({len(df_rotas_motorista)} Paradas)")
-        for i, row in df_rotas_motorista.iterrows():
-            chave_entrega = f"{v_atual}_{i}"
-            status_atual = st.session_state['registro_entregas'].get(chave_entrega, "⏳ Em Rota")
-            with st.container():
-                st.markdown(f"### **{i+1}ª Parada**")
-                st.markdown(f"👤 **Cliente:** {row.get('Nome', 'Não Informado')}")
-                st.markdown(f"📍 {row.get('Endereço', '')} - {row.get('Bairro', '')}, {row.get('Cidade', '')}")
-                st.markdown(f"Status Atual: `{status_atual}`")
-                if status_atual == "⏳ Em Rota":
-                    if st.button(f"✓ Confirmar Entrega #{i+1}", key=f"btn_{chave_entrega}", use_container_width=True):
-                        st.session_state['registro_entregas'][chave_entrega] = "✅ Pacote Entregue"
-                        st.success("Status sincronizado via satélite!")
-                        time.sleep(0.4)
-                        st.rerun()
-                else:
-                    st.markdown("<p style='color: #22c55e; font-weight: bold;'>★ Entrega Concluída com Sucesso</p>", unsafe_allow_html=True)
-                st.markdown("---")
+                        st.session_state['rotas_por_veiculo_global']
