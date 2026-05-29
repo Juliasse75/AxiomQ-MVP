@@ -4,6 +4,7 @@ import pandas as pd
 import folium
 import time
 import numpy as np
+import io
 
 st.set_page_config(page_title="AxiomQ | Matriz Global", layout="wide", page_icon="⚡")
 
@@ -34,7 +35,7 @@ if 'frotas' not in st.session_state:
         ]
     }
 
-# Memórias de persistência de arquivos para evitar perdas no reload do Streamlit
+# Memórias de persistência de arquivos
 if 'df_entregas_salvo' not in st.session_state: st.session_state['df_entregas_salvo'] = None
 if 'motor_acionado' not in st.session_state: st.session_state['motor_acionado'] = False
 if 'registro_entregas' not in st.session_state: st.session_state['registro_entregas'] = {}
@@ -80,13 +81,17 @@ if st.sidebar.button("🔒 Encerrar Sessão", use_container_width=True):
     st.session_state['user_atual'] = None
     st.rerun()
 
-# PAINEL MASTER DO ADMINISTRADOR
+# ==========================================
+# AMBIENTE MASTER: ADMINISTRADOR
+# ==========================================
 if user_info['perfil'] == 'MASTER':
     st.title(f"👋 Bem-vindo, {user_info['nome']} | Controle Matriz")
     dados_tabela = [{"Login/E-mail": k, "Empresa": v["Empresa"], "CNPJ": v["CNPJ"], "Status": v["Status"]} for k, v in st.session_state['clientes'].items()]
     st.table(pd.DataFrame(dados_tabela))
 
-# PAINEL DO CLIENTE (GERENTE DA FARMÁCIA)
+# ==========================================
+# AMBIENTE CLIENTE: GERENTE DA FARMÁCIA
+# ==========================================
 elif user_info['perfil'] == 'CLIENTE':
     client_email = st.session_state['user_atual']
     c_dados = st.session_state['clientes'][client_email]
@@ -97,11 +102,87 @@ elif user_info['perfil'] == 'CLIENTE':
     
     aba_frota_cli, aba_roteiro_cli = st.tabs(["🚛 1. Gerenciar Frota Ativa", "📦 2. Roteirizar Entregas"])
     
+    # --- RESTAURAÇÃO DA ABA DE FROTA ---
     with aba_frota_cli:
-        st.subheader("Controle de Ativos")
-        frota_atual = st.session_state['frotas'].get(client_email, [])
-        st.dataframe(pd.DataFrame(frota_atual), use_container_width=True)
+        st.subheader("Controle de Ativos e Disponibilidade de Veículos")
+        col_up_frota, col_lista_frota = st.columns([1, 2])
         
+        with col_up_frota:
+            st.markdown("### 📥 Carga Inicial de Frota")
+            arq_f = st.file_uploader("Upload da Frota (CSV)", type="csv", key="frota_uploader")
+            if arq_f:
+                if st.button("🔄 Processar e Integrar Planilha", use_container_width=True):
+                    df_f_uploaded = pd.read_csv(arq_f)
+                    nova_frota = []
+                    for _, r in df_f_uploaded.iterrows():
+                        tipo_planilha = str(r.get('Tipo', 'Carro Leve'))
+                        if tipo_planilha not in LISTA_MODAIS: tipo_planilha = "Carro Leve"
+                        nova_frota.append({
+                            "ID_Veiculo": str(r.get('ID_Veiculo', f"VEIC-{_}")),
+                            "Tipo": tipo_planilha,
+                            "Capacidade_KG": int(r.get('Capacidade_KG', 500)),
+                            "Status": "Disponível"
+                        })
+                    st.session_state['frotas'][client_email] = nova_frota
+                    st.success(f"✅ Frota integrada com sucesso!")
+                    time.sleep(1)
+                    st.rerun()
+            
+            st.markdown("---")
+            st.markdown("### ➕ Incluir Veículo Avulso")
+            with st.form("add_avulso"):
+                id_v = st.text_input("Identificação do Veículo (Prefixo/Placa):")
+                tipo_v = st.selectbox("Modal / Tipo:", LISTA_MODAIS)
+                cap_v = st.number_input("Capacidade de Carga (KG):", min_value=1, value=500)
+                if st.form_submit_button("Adicionar à Frota Ativa", use_container_width=True):
+                    if id_v:
+                        st.session_state['frotas'][client_email].append({"ID_Veiculo": id_v, "Tipo": tipo_v, "Capacidade_KG": int(cap_v), "Status": "Disponível"})
+                        st.success(f"Veículo {id_v} incluído!")
+                        time.sleep(0.5)
+                        st.rerun()
+        
+        with col_lista_frota:
+            st.markdown("### 📋 Frota Registrada no Sistema")
+            frota_atual = st.session_state['frotas'].get(client_email, [])
+            
+            if frota_atual:
+                df_frota_visu = pd.DataFrame(frota_atual)
+                st.dataframe(df_frota_visu, use_container_width=True)
+                
+                # Exportação
+                csv_data = df_frota_visu.to_csv(index=False, sep=';', encoding='utf-8-sig')
+                st.download_button(label="📥 Exportar Frota Atual (Excel)", data=csv_data, file_name="frota_axiomq.csv", mime="text/csv", use_container_width=True)
+                
+                st.markdown("---")
+                st.markdown("### 🛠️ Modificar Veículo Individual")
+                v_selecionado = st.selectbox("Escolha o veículo para alterar:", [v["ID_Veiculo"] for v in frota_atual])
+                
+                if v_selecionado:
+                    idx = next(i for i, v in enumerate(frota_atual) if v["ID_Veiculo"] == v_selecionado)
+                    v_dados = frota_atual[idx]
+                    col_edit1, col_edit2 = st.columns(2)
+                    lbl_status = "🔴 Deixar Indisponível" if v_dados["Status"] == "Disponível" else "🟢 Ativar Veículo"
+                    n_stat = "Indisponível" if v_dados["Status"] == "Disponível" else "Disponível"
+                    
+                    if col_edit1.button(lbl_status, use_container_width=True):
+                        st.session_state['frotas'][client_email][idx]["Status"] = n_stat
+                        st.rerun()
+                    if col_edit2.button("🗑️ Remover da Frota", use_container_width=True):
+                        st.session_state['frotas'][client_email].pop(idx)
+                        st.rerun()
+                    
+                    with st.expander("📝 Editar Detalhes Mecânicos"):
+                        with st.form("edit_mec"):
+                            novo_tipo = st.selectbox("Alterar Tipo:", LISTA_MODAIS, index=LISTA_MODAIS.index(v_dados["Tipo"]) if v_dados["Tipo"] in LISTA_MODAIS else 0)
+                            nova_cap = st.number_input("Nova Capacidade (KG):", value=v_dados["Capacidade_KG"])
+                            if st.form_submit_button("Salvar Alterações Mecânicas", use_container_width=True):
+                                st.session_state['frotas'][client_email][idx]["Tipo"] = novo_tipo
+                                st.session_state['frotas'][client_email][idx]["Capacidade_KG"] = int(nova_cap)
+                                st.rerun()
+            else:
+                st.warning("Nenhum veículo cadastrado.")
+
+    # --- ABA DE ROTEIRIZAÇÃO ---
     with aba_roteiro_cli:
         col_pedidos, col_mapa_painel = st.columns([1, 2])
         with col_pedidos:
@@ -110,7 +191,7 @@ elif user_info['perfil'] == 'CLIENTE':
             
             if arq_e:
                 st.session_state['df_entregas_salvo'] = pd.read_csv(arq_e)
-                st.success("Planilha carregada com sucesso na memória de sessão!")
+                st.success("✅ Planilha carregada na memória com sucesso!")
             
             df_entregas = st.session_state['df_entregas_salvo']
             veiculos_disponiveis = [v for v in st.session_state['frotas'].get(client_email, []) if v["Status"] == "Disponível"]
@@ -138,14 +219,12 @@ elif user_info['perfil'] == 'CLIENTE':
                     df_ordenado = df_entregas.sort_values(by=['Latitude', 'Longitude']).reset_index(drop=True)
                     lista_resumo_kpis = []
                     
-                    # Limpa as rotas globais antes de recalcular
                     st.session_state['rotas_por_veiculo_global'] = {}
                     
                     for idx_v, v in enumerate(veiculos_disponiveis):
                         pontos_v = df_ordenado[df_ordenado.index % qtd_v == idx_v].reset_index(drop=True)
                         cor_v = cores_hex[idx_v % len(cores_hex)]
                         
-                        # Salva na memória global para o condutor ler depois
                         st.session_state['rotas_por_veiculo_global'][v["ID_Veiculo"]] = pontos_v
                         coordenadas_linha = [[lat_media, lon_media]]
                         
@@ -179,7 +258,6 @@ elif user_info['perfil'] == 'CLIENTE':
                     st.markdown("### 📊 Quadro de Eficiência Operacional (KPIs)")
                     st.table(pd.DataFrame(lista_resumo_kpis))
                     
-                    # Manifesto Nominal usando os dados reais da planilha carregada
                     st.markdown("---")
                     st.markdown("### 📋 Auditoria de Manifesto Nominativo Real")
                     v_sel = st.selectbox("Selecione o veículo para auditar:", list(st.session_state['rotas_por_veiculo_global'].keys()))
@@ -190,7 +268,6 @@ elif user_info['perfil'] == 'CLIENTE':
                         for idx_p, row in df_paradas.iterrows():
                             chave = f"{v_sel}_{idx_p}"
                             
-                            # Puxa os dados reais da sua planilha de 25 pontos
                             nome_c = row.get('Nome', f"Cliente #{idx_p+1}")
                             rua_c = row.get('Endereço', 'Rua')
                             bairro_c = row.get('Bairro', 'Bairro')
@@ -208,7 +285,9 @@ elif user_info['perfil'] == 'CLIENTE':
             else:
                 st.info("Aguardando acionamento do motor tático.")
 
+# ==========================================
 # INTERFACE MOBILE: APP DO CONDUTOR
+# ==========================================
 elif user_info['perfil'] == 'CONDUTOR':
     st.markdown("""
         <style>
