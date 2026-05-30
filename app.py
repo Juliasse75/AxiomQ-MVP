@@ -79,7 +79,7 @@ DADOS_BH_MOCK = [
     {"Nome": "Thiago Ribeiro", "Endereço": "Rua Alagoas 700", "Bairro": "Savassi", "Cidade": "Belo Horizonte", "Latitude": -19.9335, "Longitude": -43.9340},
     {"Nome": "Mecânica Silva", "Endereço": "Av. Barão Homem de Melo 100", "Bairro": "Nova Suíça", "Cidade": "Belo Horizonte", "Latitude": -19.9350, "Longitude": -43.9600},
     {"Nome": "Camila Rocha", "Endereço": "Rua Piauí 400", "Bairro": "Santa Efigênia", "Cidade": "Belo Horizonte", "Latitude": -19.9250, "Longitude": -43.9250},
-    {"Nome": "Restaurante Fogão", "Endereço": "Rua Tupinambás 600", "Bairro": "Centro", "Cidade": "Belo Horizonte", "Latitude": -19.9175, "Crash": "N", "Longitude": -43.9390},
+    {"Nome": "Restaurante Fogão", "Endereço": "Rua Tupinambás 600", "Bairro": "Centro", "Cidade": "Belo Horizonte", "Latitude": -19.9175, "Longitude": -43.9390},
     {"Nome": "Marcos Vinícius", "Endereço": "Av. Nossa Sra do Carmo 300", "Bairro": "Sion", "Cidade": "Belo Horizonte", "Latitude": -19.9450, "Longitude": -43.9320},
     {"Nome": "Juliana Alves", "Endereço": "Rua Rio Grande do Norte 1000", "Bairro": "Savassi", "Cidade": "Belo Horizonte", "Latitude": -19.9355, "Longitude": -43.9300},
     {"Nome": "Pet Shop Cão Feliz", "Endereço": "Av. Augusto de Lima 1500", "Bairro": "Barro Preto", "Cidade": "Belo Horizonte", "Latitude": -19.9265, "Longitude": -43.9470},
@@ -95,9 +95,7 @@ LOGO_HTML = """
 </div>
 """
 
-# ==========================================
 # TELA DE AUTENTICAÇÃO CENTRAL
-# ==========================================
 if not st.session_state['logado']:
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
@@ -118,7 +116,16 @@ if not st.session_state['logado']:
                     st.error("Credenciais inválidas.")
     st.stop()
 
+# DEFINIÇÃO SEGURA DO PERFIL LOGADO
 user_info = st.session_state['usuarios'][st.session_state['user_atual']]
+
+# INICIALIZADOR DE SEGURANÇA PARA DISPOSITIVOS MÓVEIS ISOLADOS
+if user_info.get('perfil') == 'CONDUTOR' and not st.session_state['motor_acionado']:
+    st.session_state['motor_acionado'] = True
+    df_m = pd.DataFrame(DADOS_BH_MOCK)
+    st.session_state['rotas_por_veiculo_global']["Moto-01"] = df_m[df_m.index % 3 == 0].reset_index(drop=True)
+    st.session_state['rotas_por_veiculo_global']["Moto-02"] = df_m[df_m.index % 3 == 1].reset_index(drop=True)
+    st.session_state['rotas_por_veiculo_global']["Moto-03"] = df_m[df_m.index % 3 == 2].reset_index(drop=True)
 
 st.sidebar.markdown("### Controle de Sessão")
 if st.sidebar.button("🔒 Encerrar Sessão", use_container_width=True):
@@ -157,7 +164,7 @@ if user_info['perfil'] == 'MASTER':
                     st.session_state['usuarios'][email_limpo_cad] = {'senha': str(senha_provisoria), 'perfil': 'CLIENTE'}
                     st.session_state['frotas'][email_limpo_cad] = []
                     st.session_state['condutores'][email_limpo_cad] = []
-                    st.success(f"✅ Parceiro {nome} registrado com sucesso!")
+                    st.success(f"✅ Parceiro {nome} registrado!")
                     st.rerun()
 
     with aba_parceiros:
@@ -201,11 +208,11 @@ if user_info['perfil'] == 'MASTER':
                         st.session_state['planos'][nome_plano_input] = desc_plano_input
                     else:
                         st.session_state['planos'][plano_selecionado_ed] = desc_plano_input
-                    st.success("Plano salvo!")
+                    st.success("Plano salvo com sucesso!")
                     st.rerun()
 
 # ==========================================
-# AMBIENTE CLIENTE: PORTAL DO GESTOR
+# AMBIENTE CLIENTE: PORTAL DO GESTOR DA FARMÁCIA
 # ==========================================
 elif user_info['perfil'] == 'CLIENTE':
     client_email = st.session_state['user_atual']
@@ -236,7 +243,7 @@ elif user_info['perfil'] == 'CLIENTE':
                                 "Capacidade_KG": int(r.get('Capacidade_KG', 500)), "Status": "Disponível", "Defeito": "-", "Data_Inatividade": "-"
                             })
                         st.session_state['frotas'][client_email] = nova_frota
-                        st.success(f"✅ Frota integrada!")
+                        st.success(f"✅ Frota de campo integrada!")
                         st.rerun()
                 
                 st.markdown("---")
@@ -272,7 +279,7 @@ elif user_info['perfil'] == 'CLIENTE':
                             st.session_state['frotas'][client_email][idx]["Status"] = n_stat
                             if n_stat == "Indisponível":
                                 st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = time.strftime("%d/%m/%Y")
-                                st.session_state['frotas'][client_email][idx]["Defeito"] = "Aguardando diagnóstico"
+                                st.session_state['frotas'][client_email][idx]["Defeito"] = "Aguardando diagnóstico mecânico"
                             else:
                                 st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = "-"
                                 st.session_state['frotas'][client_email][idx]["Defeito"] = "-"
@@ -287,14 +294,16 @@ elif user_info['perfil'] == 'CLIENTE':
                                 novo_tipo = st.selectbox("Alterar Tipo:", LISTA_MODAIS, index=LISTA_MODAIS.index(v_dados["Tipo"]) if v_dados["Tipo"] in LISTA_MODAIS else 0)
                                 nova_cap = st.number_input("Nova Capacidade (KG):", value=v_dados["Capacidade_KG"])
                                 novo_defeito = st.text_area("Observação / Defeito do Veículo:", value=v_dados.get("Defeito", "-"))
-                                nova_data_inativ = st.text_input("Data de Entrada no Status Indisponível (dd/mm/aaaa):", value=v_dados.get("Data_Inatividade", "-"))
+                                nova_data_inativ = st.text_input("Data de Entrada no Status Indisponível:", value=v_dados.get("Data_Inatividade", "-"))
                                 if st.form_submit_button("Salvar Alterações Mecânicas", use_container_width=True):
                                     st.session_state['frotas'][client_email][idx]["Tipo"] = novo_tipo
                                     st.session_state['frotas'][client_email][idx]["Capacidade_KG"] = int(nova_cap)
                                     st.session_state['frotas'][client_email][idx]["Defeito"] = novo_defeito
                                     st.session_state['frotas'][client_email][idx]["Data_Inatividade"] = nova_data_inativ
-                                    st.success("Histórico salvo!")
+                                    st.success("Histórico mecânico atualizado!")
                                     st.rerun()
+                else:
+                    st.warning("Nenhum veículo cadastrado.")
 
         with sub_aba_condutores:
             st.markdown("### 👥 Matriz de Recursos Humanos")
@@ -313,7 +322,7 @@ elif user_info['perfil'] == 'CLIENTE':
                     c_venc_cnh = st.date_input("Vencimento CNH:")
                     c_end = st.text_area("Endereço Residencial:")
                     c_email = st.text_input("E-mail de Login:")
-                    c_senha = st.text_input("Senha de Acesso Tático:", type="password", value="789")
+                    c_senha = st.text_input("Senha de Acesso:", type="password", value="789")
                     c_veiculo = st.selectbox("Vincular a um Veículo:", ["-- Deixar Sem Vínculo --"] + lista_id_veiculos)
                     
                     if st.form_submit_button("Emitir Acesso e Salvar Condutor", use_container_width=True):
@@ -374,7 +383,6 @@ elif user_info['perfil'] == 'CLIENTE':
             if df_entregas is not None and st.session_state['motor_acionado'] and len(veiculos_disponiveis) > 0:
                 try:
                     lat_media, lon_media = df_entregas['Latitude'].mean(), df_entregas['Longitude'].mean()
-                    
                     st.markdown("### 👁️ Filtro de Isolamento de Frota")
                     opcoes_filtro = ["Mostrar Todos os Veículos"] + [v["ID_Veiculo"] for v in veiculos_disponiveis]
                     veiculos_selecionados = st.multiselect("Visualização de Frota:", options=opcoes_filtro, default=["Mostrar Todos os Veículos"])
@@ -420,13 +428,11 @@ elif user_info['perfil'] == 'CLIENTE':
                     st.markdown("### 📊 Quadro de Eficiência Operacional (KPIs)")
                     st.table(pd.DataFrame(lista_resumo_kpis))
                     
-                    # --- REQUISITO REALIZADO: FORMATAÇÃO COMPLETA NOME + VEÍCULO (RESOLÇÃO DE ESCOPO) ---
                     st.markdown("---")
                     st.markdown("### 📋 Auditoria de Manifesto Nominativo Real")
                     
                     def formatar_caixa_manifesto(v_id):
                         m_nome = "Sem condutor"
-                        # Procura o motorista de forma limpa usando a conta master atual logada
                         for cond in st.session_state['condutores'].get('gerente@farmaciax.com.br', []):
                             if cond["Veiculo"] == v_id:
                                 m_nome = cond["Nome"]
@@ -456,7 +462,7 @@ elif user_info['perfil'] == 'CLIENTE':
                 st.info("Aguardando ativação do motor.")
 
 # ==========================================
-# INTERFACE MOBILE: APP DO CONDUTOR (BLINDADO)
+# INTERFACE MOBILE: APP DO CONDUTOR (VERSÃO 3.1 EXPANDIDA)
 # ==========================================
 elif user_info['perfil'] == 'CONDUTOR':
     st.markdown("""
@@ -471,7 +477,6 @@ elif user_info['perfil'] == 'CONDUTOR':
     
     v_atual = user_info['veiculo']
     
-    # --- DEFESA ANTI-KEYERROR DE CACHE DO STREAMLIT ---
     if v_atual != "-" and (v_atual not in st.session_state['rotas_por_veiculo_global'] or not st.session_state['motor_acionado']):
         df_m = pd.DataFrame(DADOS_BH_MOCK)
         st.session_state['rotas_por_veiculo_global']["Moto-01"] = df_m[df_m.index % 3 == 0].reset_index(drop=True)
@@ -484,20 +489,62 @@ elif user_info['perfil'] == 'CONDUTOR':
     else:
         df_rotas_motorista = st.session_state['rotas_por_veiculo_global'][v_atual]
         st.subheader(f"📋 Suas Entregas ({len(df_rotas_motorista)} Paradas)")
+        
         for i, row in df_rotas_motorista.iterrows():
             chave_entrega = f"{v_atual}_{i}"
             status_atual = st.session_state['registro_entregas'].get(chave_entrega, "⏳ Em Rota")
+            
             with st.container():
                 st.markdown(f"### **{i+1}ª Parada**")
                 st.markdown(f"👤 **Cliente:** {row.get('Nome', 'Não Informado')}")
                 st.markdown(f"📍 {row.get('Endereço', '')} - {row.get('Bairro', '')}, {row.get('Cidade', '')}")
-                st.markdown(f"Status Atual: `{status_atual}`")
-                if status_atual == "⏳ Em Rota":
-                    if st.button(f"✓ Confirmar Entrega #{i+1}", key=f"btn_{chave_entrega}", use_container_width=True):
+                
+                # Exibição de alertas visuais dependendo do status
+                if "⏳" in status_atual:
+                    st.markdown(f"Status: <span style='color: #eab308; font-weight: bold;'>{status_atual}</span>", unsafe_allow_html=True)
+                elif "✅" in status_atual:
+                    st.markdown(f"Status: <span style='color: #22c55e; font-weight: bold;'>{status_atual}</span>", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"Status: <span style='color: #ef4444; font-weight: bold;'>{status_atual}</span>", unsafe_allow_html=True)
+                
+                # SE O STATUS FOR "EM ROTA", EXIBE OS NOVOS MÓDULOS DE COMPROVANTE E PÂNICO
+                if "⏳" in status_atual:
+                    
+                    # 1. EXPANDER DA FOTO DA ASSINATURA / CANHOTO
+                    with st.expander("📸 1. Capturar Prova de Entrega (Foto)"):
+                        st.markdown("<p style='font-size: 12px; color: gray;'>Posicione a assinatura ou canhoto do cliente em frente à câmera e clique no botão de captura.</p>", unsafe_allow_html=True)
+                        foto_capturada = st.camera_input("Tirar Foto do Comprovante", key=f"cam_{chave_entrega}")
+                        if foto_capturada:
+                            st.success("📷 Foto de conformidade anexada com sucesso!")
+                    
+                    # 2. BOTÃO DE CONFIRMAÇÃO DE ENTREGA FINAL
+                    if st.button(f"✓ Confirmar Conclusão da Entrega #{i+1}", key=f"btn_ok_{chave_entrega}", use_container_width=True):
                         st.session_state['registro_entregas'][chave_entrega] = "✅ Pacote Entregue"
-                        st.success("Status sincronizado via satélite!")
+                        st.success("Sincronizado na central!")
                         time.sleep(0.4)
                         st.rerun()
+                        
+                    # 3. EXPANDER DO BOTÃO DE PÂNICO / REPORTE DE OCORRÊNCIA
+                    with st.expander("🚨 Reportar Ocorrência em Campo / Pânico"):
+                        st.markdown("<p style='font-size: 12px; color: #ef4444;'>Selecione o motivo do incidente grave. Esta ação notificará imediatamente o gestor logístico.</p>", unsafe_allow_html=True)
+                        motivo_incidente = st.selectbox(
+                            "Selecione o Motivo do Alerta:",
+                            ["-- Selecione o Incidente --", "Pneu Furado / Pane Mecânica", "Trânsito Paralisado / Retenção", "Acidente / Colisão", "Cliente Ausente / Local Fechado", "Risco de Segurança / Coação", "Outro Imprevisto Operacional"],
+                            key=f"inc_sel_{chave_entrega}"
+                        )
+                        detalhe_incidente = st.text_input("Detalhamento Tático do Ocorrido:", key=f"inc_txt_{chave_entrega}", placeholder="Ex: Batida leve na traseira, aguardando perícia.")
+                        
+                        if st.button(f"🔥 DISPARAR ALERTA DE PÂNICO #{i+1}", key=f"btn_pan_{chave_entrega}", use_container_width=True):
+                            if motivo_incidente != "-- Selecione o Incidente --":
+                                st.session_state['registro_entregas'][chave_entrega] = f"🚨 Ocorrência: {motivo_incidente} ({detalhe_incidente})"
+                                st.warning("Alerta de emergência enviado à base!")
+                                time.sleep(0.4)
+                                st.rerun()
+                            else:
+                                st.error("Por favor, selecione um motivo válido para o alerta de pânico.")
                 else:
-                    st.markdown("<p style='color: #22c55e; font-weight: bold;'>★ Entrega Concluída com Sucesso</p>", unsafe_allow_html=True)
+                    if "✅" in status_atual:
+                        st.markdown("<p style='color: #22c55e; font-weight: bold;'>★ Operação Finalizada com Sucesso</p>", unsafe_allow_html=True)
+                    else:
+                        st.markdown("<p style='color: #ef4444; font-weight: bold;'>⚠️ Incidente Reportado. Aguardando Instruções do Gestor.</p>", unsafe_allow_html=True)
                 st.markdown("---")
